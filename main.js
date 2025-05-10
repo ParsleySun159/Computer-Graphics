@@ -34,19 +34,9 @@ const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5);
 scene.add(ambientLight);
 
 //Ground plane
-const textureLoader = new THREE.TextureLoader();
-const groundTexture = textureLoader.load('grid.png');
-groundTexture.wrapS = THREE.RepeatWrapping;
-groundTexture.wrapT = THREE.RepeatWrapping;
-
-const planeMaterial = new THREE.MeshStandardMaterial({
-    map: groundTexture,
-    side: THREE.DoubleSide
-});
-
 const plane = new THREE.Mesh(
     new THREE.PlaneGeometry(50, 50),
-    planeMaterial
+    new THREE.MeshStandardMaterial({ color: 0x404040 })
 );
 plane.rotation.x = -Math.PI / 2;
 plane.receiveShadow = true;
@@ -87,7 +77,6 @@ let player;
 let head, leftHand, rightHand;
 let animations = [];
 let action = {};
-let helper;
 const loader = new GLTFLoader();
 loader.load('./Model/Male_MC.glb', (gltf) => {
     player = gltf.scene;
@@ -473,13 +462,6 @@ function animate() {
         headYaw = THREE.MathUtils.clamp(headYaw, -maxHeadYaw, maxHeadYaw); //head rotation range
         currentHeadYaw = THREE.MathUtils.lerpAngle(currentHeadYaw, headYaw, delta * 5);
         head.rotation.set(0, currentHeadYaw, 0);
-        const dirHelper = new THREE.ArrowHelper(
-            new THREE.Vector3(Math.sin(targetYaw), 0, Math.cos(targetYaw)),
-            headWorldPos,
-            1,
-            0xff0000
-        );
-        scene.add(dirHelper);
     }
     dynamicMeshes = dynamicMeshes.filter(obj => {
         if (obj.userData.isBullet) {
