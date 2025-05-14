@@ -13,7 +13,7 @@ camera.position.set(0, 0, 0);
 camera.lookAt(0, 0, 0);
 
 //lighting
-const light = new THREE.DirectionalLight(0xffffff, 2); //040348
+const light = new THREE.DirectionalLight(0xb0c4de, 2); //040348
 light.position.set(50, 100, 50);
 light.castShadow = true;
 light.shadow.bias = -0.0001; //giam artifcat
@@ -30,8 +30,12 @@ light.shadow.camera.far = 500;
 light.shadow.mapSize.width = 2048; 
 light.shadow.mapSize.height = 2048;
 
-const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5);
-scene.add(ambientLight);
+const hemisphereLight = new THREE.HemisphereLight(0x4682b4, 0x2f4f4f, 1);
+scene.add(hemisphereLight);
+
+const torchLight1 = new THREE.PointLight(0xff4500, 50, 100, 2); // Orange-red, distance 20, decay 2
+torchLight1.position.set(3, 0.5, 2); // Adjust position to place near a wall or object
+scene.add(torchLight1);
 
 //Ground plane
 const plane = new THREE.Mesh(
@@ -67,14 +71,14 @@ document.getElementById('webgl').appendChild(renderer.domElement);
 
 //Bullet
 const bullet = new THREE.Mesh(
-    new THREE.SphereGeometry(0.1, 32, 32),
+    new THREE.SphereGeometry(0.05, 32, 32),
     new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 bullet.castShadow = true;
 
 let mixer;
 let player;
-let head, leftHand, rightHand;
+let head, leftGun, rightGun;
 let animations = [];
 let action = {};
 const loader = new GLTFLoader();
@@ -84,11 +88,13 @@ loader.load('./Model/Male_MC.glb', (gltf) => {
     player.scale.set(1, 1, 1);
 
     player.userData = {
-        isIdle: true,
         isWalk: false,
         isAim: false,
         isShoot: false,
         isRightHand: false,
+    }
+    player.stat = {
+        Speed: 1,
     }
 
     const playerHitbox = new THREE.Mesh(
@@ -109,21 +115,23 @@ loader.load('./Model/Male_MC.glb', (gltf) => {
     });
 
     head = player.getObjectByName('Head');
-    leftHand = player.getObjectByName('HandL');
-    rightHand = player.getObjectByName('HandR');
+    leftGun = player.getObjectByName('GunL');
+    rightGun = player.getObjectByName('GunR');
     player.name = 'Player1';
+    window.player = player;
     scene.add(player);
-
-    mixer = new THREE.AnimationMixer(player);
 
     const playerBoneFilter = {
         'Idle': { excludeBones: ['EyelidL', 'EyelidR'] },
         'Walking': { excludeBones: ['EyelidL', 'EyelidR'] },
         'Blinking': { filterBones: ['EyelidL', 'EyelidR'] },
-        'Aim': { filterBones: ['Neck', 'ShoulderL','ShoulderR','Upper_ArmL','Upper_ArmR','Fore_ArmL','Fore_ArmR','HandL','HandR','IKArmL','IKArmR','TargerArmL','TargetArmR','Spine','Hips']},
-        'Shoot': { filterBones: ['Neck', 'ShoulderL', 'ShoulderR', 'Upper_ArmL', 'Upper_ArmR', 'Fore_ArmL', 'Fore_ArmR', 'HandL', 'HandR', 'IKArmL', 'IKArmR', 'TargerArmL', 'TargetArmR', 'Spine', 'Hips'] }
+        'Aim': { filterBones: ['Neck', 'ShoulderL','ShoulderR','Upper_ArmL','Upper_ArmR','Fore_ArmL','Fore_ArmR','HandL','HandR','IKArmL','IKArmR','TargetArmL','TargetArmR','Spine','Hips', 'CTRLTorso', 'GunL', 'GunR']},
+        'ShootL': { filterBones: ['Neck', 'ShoulderL', 'Upper_ArmL', 'Fore_ArmL', 'HandL', 'IKArmL', 'TargetArmL', 'Spine', 'Hips', 'CTRLTorso', 'GunL'] },
+        'ShootR': { filterBones: ['Neck', 'ShoulderR', 'Upper_ArmR', 'Fore_ArmR', 'HandR', 'IKArmR', 'TargetArmR', 'Spine', 'Hips', 'CTRLTorso', 'GunR'] },
+        'GunDown': { filterBones: ['Neck', 'ShoulderL', 'ShoulderR', 'Upper_ArmL', 'Upper_ArmR', 'Fore_ArmL', 'Fore_ArmR', 'HandL', 'HandR', 'IKArmL', 'IKArmR', 'TargetArmL', 'TargetArmR', 'Spine', 'Hips', 'CTRLTorso', 'GunL', 'GunR'] }
     }
 
+    mixer = new THREE.AnimationMixer(player);
     animations = gltf.animations;
     animations.forEach((clip) => {
         const act = mixer.clipAction(clip);
@@ -140,11 +148,15 @@ loader.load('./Model/Male_MC.glb', (gltf) => {
     action['Idle'].setLoop(THREE.LoopOnce);
     action['Idle'].clampWhenFinished = true;
     action['Idle'].timeScale = 1.25;
-    /*   action['Idle'].play();*/
     action['Blinking'].setLoop(THREE.LoopOnce);
     action['Blinking'].clampWhenFinished = true;
     action['Aim'].setLoop(THREE.LoopOnce);
-    /*action['Idle']?.play();*/
+    action['Aim'].clampWhenFinished = true;
+    action['ShootL'].setLoop(THREE.LoopOnce);
+    action['ShootL'].clampWhenFinished = true;
+    action['ShootR'].setLoop(THREE.LoopOnce);
+    action['ShootR'].clampWhenFinished = true;
+    action['GunDown'].setLoop(THREE.LoopOnce);
     function playBlinking() {
         if (action['Blinking'] && !action['Blinking'].isRunning())
             action['Blinking'].reset().play();
@@ -259,63 +271,60 @@ document.addEventListener('mousemove', (event) => {
 });
 let bulletClone;
 let shootInterval;
-//document.addEventListener('click', (event) => {
-//    if (event.button === 0) { // Left mouse button)
-//        if (!isAim) {
-//            isAim = true;
-//            action['Idle'].fadeOut(0.3);
-//            BoneFilters(action['Walking'], { filterBones: ['CTRLTorso', 'ThighL', 'ThighR', 'ShinL', 'ShinR', 'FootL', 'FootR', 'HeelsL', 'HeelsR', 'ToesL', 'ToesR', 'TargetLegL', 'TargetLegR'] });
-//            action['Aim'].reset().play();
-//        }
-//        if (isAim) {
-//            action['Aim'].fadeOut(0.3);
-//            action['Shoot'].reset().fadeIn(0.3).play();
-//        }
-//    }
-//});
+function OnGunUp(event) {
+    if (event.action === action['Aim']) {
+        mixer.removeEventListener('finished', OnGunUp);
+        shoot();
+        shootInterval = setInterval(() => { shoot(); }, 384); //1 lan ban moi ben = 8 frame * 24 frame rate * 2
+    }
+}
 document.addEventListener('mousedown', (event) => {
     if (event.button === 0) { // Left mouse button
         if (!player.userData.isAim) {
-            player.userData.isAim = true;
-            action['Idle'].fadeOut(0.3);
-            action['Aim'].reset().play();
-            player.userData.isShoot = true;
             BoneFilters(action['Walking'], { filterBones: ['CTRLTorso', 'ThighL', 'ThighR', 'ShinL', 'ShinR', 'FootL', 'FootR', 'HeelsL', 'HeelsR', 'ToesL', 'ToesR', 'TargetLegL', 'TargetLegR'] });
+            player.userData.isAim = true;
+            action['Idle']?.fadeOut(0.3);
+            action['GunDown']?.fadeOut(0.3);
+            action['Aim'].reset().fadeIn(0.3).play();
+            player.userData.isShoot = true;
         }
         if (player.userData.isShoot && !shootInterval) {
-            action['Aim'].fadeOut(0.3);
-            action['Shoot'].reset().play();
-            shootInterval = setInterval(() => { shoot(); }, 384); //1 lan ban = 8 frame * 24 frame rate
+            mixer.addEventListener('finished', OnGunUp);
         }
     }
 });
 document.addEventListener('mouseup', (event) => {
     if (event.button === 0) {
         player.userData.isAim = false;
-        player.userData.isShoot = false;
         clearInterval(shootInterval);
         shootInterval = null;
+        action['ShootL'].fadeOut(0.3);
+        action['ShootR'].fadeOut(0.3);
         action['Aim'].fadeOut(0.3);
-        action['Shoot'].fadeOut(0.3);
-        BoneFilters(action['Walking'], {});
-        if (!player.userData.isWalk) {
-            const idleAction = action['Idle'];
-            idleAction.reset();
-            idleAction.time = idleAction.getClip().duration; // Start at the end
-            idleAction.timeScale = -1; //Reverse
-            idleAction.play();
-        }
+        action['GunDown'].reset().fadeIn(0.3).play();
+        mixer.addEventListener('finished', function OnGunDown(event){
+            if (event.action === action['GunDown']) {
+                mixer.removeEventListener('finished', OnGunDown);
+                player.userData.isShoot = false;
+                if (!player.userData.isAim && !player.userData.isShoot) {
+                    BoneFilters(action['Walking'], {});
+                }
+                if (!player.userData.isWalk) {
+                    action['Idle'].reset().fadeIn(0.3).play();
+                }
+            }
+        });
     }
 });
 
 function shoot() {
-    const hand = player.userData.isRightHand ? rightHand : leftHand;
-    const handWorldPosition = new THREE.Vector3();
-    hand.getWorldPosition(handWorldPosition);
+    const gun = player.userData.isRightHand ? rightGun : leftGun;
+    const gunWorldPosition = new THREE.Vector3();
+    gun.getWorldPosition(gunWorldPosition);
     bulletClone = bullet.clone();
     bulletClone.userData.isBullet = true;
     bulletClone.userData.spawnTime = performance.now();
-    bulletClone.position.copy(handWorldPosition);
+    bulletClone.position.copy(gunWorldPosition);
     bulletClone.frustumCulled = false; // Disable frustum culling, bullet wont disappear if out of camera range
     scene.add(bulletClone);
     dynamicMeshes.push(bulletClone);
@@ -323,6 +332,12 @@ function shoot() {
     direction.y = 0;
     direction.normalize();
     bulletClone.velocity = direction.multiplyScalar(15); // Set bullet speed
+    if (player.userData.isRightHand) {
+        action['ShootR'].reset().play();
+    }
+    else {
+        action['ShootL'].reset().play();
+    }
     player.userData.isRightHand = !player.userData.isRightHand;
 }
 
@@ -372,7 +387,8 @@ function animate() {
             action['Walking']?.reset().fadeIn(0.3).play();
         }
 
-        const moveSpeed = delta * 1.5;
+        const moveSpeed = delta * player.stat.Speed;
+        action['Walking'].timeScale = 0.5 + player.stat.Speed/2;
         player.position.addScaledVector(direction, moveSpeed);
         player.updateMatrixWorld(true);
 
@@ -429,13 +445,13 @@ function animate() {
         if (player.userData.isWalk) {
             player.userData.isWalk = false;
             action['Walking']?.fadeOut(0.3);
-            if (!player.userData.isAim) {
+            if (!player.userData.isAim && !player.userData.isShoot) {
                 action['Idle']?.reset().fadeIn(0.3).play();
             }
         }
     }
     const targetPos = player.position.clone();
-    camera.position.set(targetPos.x, targetPos.y + 12, targetPos.z + 6);
+    camera.position.set(targetPos.x, targetPos.y + 10, targetPos.z + 6);
     camera.lookAt(targetPos);
 
     if (head && player) { //Rotation ~ mouse
@@ -451,7 +467,7 @@ function animate() {
         let angleToTarget = targetYaw - bodyYaw;
         angleToTarget = Math.atan2(Math.sin(angleToTarget), Math.cos(angleToTarget));
 
-        const bodyTurnSpeed = 0.025; //body rotation speed
+        const bodyTurnSpeed = 0.05; //body rotation speed
         player.rotation.y += angleToTarget * bodyTurnSpeed;
 
         bodyYaw = player.rotation.y;
