@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Level } from './level.js';
 
 const scene = new THREE.Scene();
 
@@ -9,7 +10,6 @@ const camera = new THREE.PerspectiveCamera(
     0.1,
     100000
 );
-camera.position.set(0, 0, 0);
 camera.lookAt(0, 0, 0);
 
 //lighting
@@ -18,8 +18,6 @@ light.position.set(50, 100, 50);
 light.castShadow = true;
 light.shadow.bias = -0.0001; //giam artifcat
 scene.add(light);
-const shadowHelper = new THREE.CameraHelper(light.shadow.camera)
-scene.add(shadowHelper);
 //Camera frostum, so cang nho thi vung nhan shadow cang nho(de bi clipping)
 light.shadow.camera.left = -30;
 light.shadow.camera.right = 30;
@@ -30,24 +28,28 @@ light.shadow.camera.far = 500;
 light.shadow.mapSize.width = 2048; 
 light.shadow.mapSize.height = 2048;
 
-const hemisphereLight = new THREE.HemisphereLight(0x4682b4, 0x2f4f4f, 1);
+const hemisphereLight = new THREE.HemisphereLight(0x4682b4, 0x2f4f4f, 5);
 scene.add(hemisphereLight);
 
-const torchLight1 = new THREE.PointLight(0xff4500, 50, 100, 2); // Orange-red, distance 20, decay 2
-torchLight1.position.set(3, 0.5, 2); // Adjust position to place near a wall or object
+const torchLight1 = new THREE.PointLight(0xff4500, 10, 10, 2); // Orange-red
+torchLight1.position.set(3, 0.5, 2);
 scene.add(torchLight1);
 
-//Ground plane
-const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(50, 50),
-    new THREE.MeshStandardMaterial({ color: 0x404040 })
-);
-plane.rotation.x = -Math.PI / 2;
-plane.receiveShadow = true;
-plane.name = 'Ground';
-scene.add(plane);
+scene.fog = new THREE.FogExp2(0xFFFFFF, 0.02); //Fog color and density
 
-//obstacles
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000);
+renderer.shadowMap.enabled = true;
+document.getElementById('webgl').appendChild(renderer.domElement);
+
+//Bullet
+const bullet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+);
+bullet.castShadow = true;
+
 const wall = new THREE.Mesh(
     new THREE.BoxGeometry(5, 10, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xFF0000 }));
@@ -63,21 +65,8 @@ sphere.castShadow = true;
 sphere.receiveShadow = true;
 scene.add(sphere);
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x1c1848);
-renderer.shadowMap.enabled = true;
-document.getElementById('webgl').appendChild(renderer.domElement);
-
-//Bullet
-const bullet = new THREE.Mesh(
-    new THREE.SphereGeometry(0.05, 32, 32),
-    new THREE.MeshStandardMaterial({ color: 0x00ff00 })
-);
-bullet.castShadow = true;
-
 let mixer;
-let player;
+let player, level;
 let head, leftGun, rightGun;
 let animations = [];
 let action = {};
@@ -94,7 +83,7 @@ loader.load('./Model/Male_MC.glb', (gltf) => {
         isRightHand: false,
     }
     player.stat = {
-        Speed: 1,
+        Speed: 5,
     }
 
     const playerHitbox = new THREE.Mesh(
@@ -174,6 +163,10 @@ loader.load('./Model/Male_MC.glb', (gltf) => {
     }
     logBonesPerClip(animations);
     */
+
+    level = new Level(player);
+    scene.add(level);
+
 }, undefined, (error) => {
     console.error(error);
 });
@@ -231,14 +224,17 @@ function BoneFilters(action, { filterBones = null, excludeBones=null }) {
 //For collision and hitbox
 let staticMeshes = [];
 let dynamicMeshes = [];
-scene.traverse((child) => {
-    if (child.isMesh && child.name != 'Player' && child.name != 'Ground') {
-        staticMeshes.push(child);
-        child.geometry.computeBoundingBox();
-        child.boundingBox = child.geometry.boundingBox.clone();
-    }
-});
+window.scene = scene;
 
+function updateStaticMeshes(object) {
+    object.traverse((child) => {
+        if (child.isMesh && child.name != 'Room1_Ground') {
+            staticMeshes.push(child);
+            child.geometry.computeBoundingBox();
+            child.boundingBox = child.geometry.boundingBox.clone();
+        }
+    });
+}
 const keysPressed = {};
 document.addEventListener('keydown', (event) => {
     keysPressed[event.key.toLowerCase()] = true;
@@ -251,7 +247,7 @@ document.addEventListener('keyup', (event) => {
 //Player Rotation
 const target = new THREE.Object3D();
 const intersectionPoint = new THREE.Vector3();
-const plane1 = new THREE.Plane();
+const plane = new THREE.Plane();
 const planeNormal = new THREE.Vector3();
 const mousePos = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
@@ -259,13 +255,13 @@ document.addEventListener('mousemove', (event) => {
     mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
     mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    plane1.setFromNormalAndCoplanarPoint(
+    plane.setFromNormalAndCoplanarPoint(
         new THREE.Vector3(0, 1, 0), // up direction
         new THREE.Vector3(0, 0, 0)  // y = 0 plane
     );
 
     raycaster.setFromCamera(mousePos, camera);
-    raycaster.ray.intersectPlane(plane1, intersectionPoint);
+    raycaster.ray.intersectPlane(plane, intersectionPoint);
 
     target.position.set(intersectionPoint.x, 0, intersectionPoint.z);
 });
@@ -354,17 +350,12 @@ function animate() {
     staticMeshes.forEach(mesh => {
         mesh.boundingBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
     }); //Update bounding boxes 4 obstacles
+    level.update(); //Update room
 
-    shadowHelper.update();
     light.target.position.copy(player.position); //Theo player de khong bi mat shadow
     light.target.updateMatrixWorld();
 
     const delta = clock.getDelta();
-
-    if (!player || animations.length === 0) {
-        renderer.render(scene, camera);
-        return;
-    }
 
     if (mixer) {
         mixer.update(delta);
@@ -387,7 +378,7 @@ function animate() {
             action['Walking']?.reset().fadeIn(0.3).play();
         }
 
-        const moveSpeed = delta * player.stat.Speed;
+        const moveSpeed = delta * 2 * player.stat.Speed;
         action['Walking'].timeScale = 0.5 + player.stat.Speed/2;
         player.position.addScaledVector(direction, moveSpeed);
         player.updateMatrixWorld(true);
@@ -451,7 +442,7 @@ function animate() {
         }
     }
     const targetPos = player.position.clone();
-    camera.position.set(targetPos.x, targetPos.y + 10, targetPos.z + 6);
+    camera.position.set(targetPos.x, targetPos.y + 12, targetPos.z + 5);
     camera.lookAt(targetPos);
 
     if (head && player) { //Rotation ~ mouse
