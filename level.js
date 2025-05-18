@@ -33,7 +33,10 @@ export class Level extends THREE.Group {
         });
     }
     update() {
-        const playerPos = this.player.position;
+        if (!this.player.player || !this.player.player.position) { //This.player = Player1 class, this.player.player = Player model
+            return; 
+        }
+        const playerPos = this.player.player.position;
 
         for (let [name, room] of this.rooms.entries()) {
             const box = new THREE.Box3().setFromObject(room);
@@ -42,6 +45,9 @@ export class Level extends THREE.Group {
                     if (this.currentRoom) this.currentRoom.visible = false;
                     room.visible = true;
                     this.currentRoom = room;
+
+                    let event = new Event('roomLoaded');
+                    window.dispatchEvent(event);
                 }
                 break;
             }
