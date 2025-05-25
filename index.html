@@ -14,13 +14,30 @@
         {
           "imports": {
             "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/",
+            "stats.js": "https://esm.sh/stats.js"
           }
         }
     </script>
 </head>
-  <body>
-      <div id="webgl"></div>
-      <script type="module" src="./main.js"></script>
-  </body>
+<body>
+    <div id="webgl"></div>
+    <script type="module" src="./main.js"></script>
+    <script type="module">
+        import Stats from "stats.js";
+
+        const stats = new Stats();
+        stats.showPanel(0);
+        document.body.appendChild(stats.dom);
+
+        function animate() {
+            stats.begin();
+            // monitored code here
+            stats.end();
+            requestAnimationFrame(animate);
+        }
+
+        requestAnimationFrame(animate);
+    </script>
+</body>
 </html>
