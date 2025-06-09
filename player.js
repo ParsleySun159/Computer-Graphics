@@ -24,11 +24,13 @@ export class Player {
         this.currentHeadYaw = 0;
 
         this.stats = {
-            Health: 100,
-            DMG: 10,
+            MaxHealth: 200,
+            Health: 200,
+            DMG: 20,
             Speed: 5
         };
         this.isAlive = true;
+        this.isFlashing = false;
 
         this.initInput();
         this.loadModel();
@@ -55,11 +57,58 @@ export class Player {
     }
     takeDamage(damage) {
         if (!this.isAlive) return;
-        this.stats.Health -= damage;
+        this.stats.Health = Math.max(0, this.stats.Health - damage);
         console.log(`Player takes ${damage} damage, health now ${this.stats.Health}`);
-        if (this.stats.Health <= 0) {
-            this.die();
+
+        const healthBar = this.model.getObjectByName("healthBarFill");
+        if (healthBar) {
+            const healthRatio = Math.max(this.stats.Health / this.stats.MaxHealth);
+            healthBar.scale.x = healthRatio;
+            healthBar.position.x = -(1 - healthRatio) * 0.5;
         }
+
+        this.flashRed();
+
+        if (this.stats.Health <= 0) {
+            //this.die();
+        }
+    }
+    flashRed() {
+        if (!this.model || this.isFlashing) return;
+
+        this.isFlashing = true;
+        const meshes = [];
+
+        this.model.traverse((child) => {
+            if (child.isMesh && child.material) {
+                meshes.push({
+                    mesh: child,
+                    originalcolor: child.material.color.clone()
+                });
+            }
+        });
+
+        let isRed = false;
+
+        const blink = setInterval(() => {
+            isRed = !isRed;
+            meshes.forEach(({ mesh, originalcolor }) => {
+                if (isRed) {
+                    mesh.material.color.set(0xff0000); // red
+                }
+                else {
+                    mesh.material.color.copy(originalcolor);
+                }
+            });
+        }, 200);
+
+        setTimeout(() => {
+            clearInterval(blink);
+            meshes.forEach(({ mesh, originalcolor }) => {
+                mesh.material.color.copy(originalcolor);
+            });
+            this.isFlashing = false;
+        }, 1000);
     }
     die() {
         console.log('isAlive:', this.isAlive);
@@ -249,6 +298,8 @@ export class Player1 extends Player {
             this.model.name = 'Player1';
             this.scene.add(this.model);
 
+            this.BloodBar();
+
             const playerBoneFilter = {
                 'Idle': { excludeBones: ['EyelidL', 'EyelidR'] },
                 'Walking': { excludeBones: ['EyelidL', 'EyelidR'] },
@@ -287,13 +338,42 @@ export class Player1 extends Player {
             this.action['GunDown'].setLoop(THREE.LoopOnce);
             this.playBlinking();
         }, undefined, (error) => {
-            console.error('Error loading Male_MC.glb: ',error);
+            console.error('Error loading Male_MC.glb: ', error);
         });
+    }
+
+    BloodBar() {
+        //blood bar
+        const healthBarContainer = new THREE.Group();
+        healthBarContainer.name = "healthBarContainer";
+        healthBarContainer.position.set(0, 2.2, 0);
+        const healthBarBackground = new THREE.Mesh(
+            new THREE.BoxGeometry(1.1, 0.1, 0.05),
+            new THREE.MeshStandardMaterial({
+                color: 0x000000,
+                transparent: true,
+                opacity: 0.7
+            })
+        );
+        healthBarBackground.name = "healthBarBackground";
+
+        // current blood
+        const healthBarFill = new THREE.Mesh(
+            new THREE.BoxGeometry(1.0, 0.1, 0.05),
+            new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+        );
+        healthBarFill.name = "healthBarFill";
+        healthBarFill.position.set(0, 0, 0.06);
+
+        healthBarContainer.add(healthBarBackground);
+        healthBarContainer.add(healthBarFill);
+        this.model.add(healthBarContainer);
     }
     initInput() {
         super.initInput();
         document.addEventListener('mousedown', (event) => {
             if (event.button === 0) { // Left mouse button
+
                 if (!this.model.userData.isAim) {
                     BoneFilters(this.action['Walking'], { filterBones: ['CTRLTorso', 'ThighL', 'ThighR', 'ShinL', 'ShinR', 'FootL', 'FootR', 'HeelsL', 'HeelsR', 'ToesL', 'ToesR', 'TargetLegL', 'TargetLegR'] });
                     this.model.userData.isAim = true;
@@ -309,6 +389,7 @@ export class Player1 extends Player {
         });
         document.addEventListener('mouseup', (event) => {
             if (event.button === 0) {
+
                 this.model.userData.isAim = false;
                 this.model.userData.isShoot = false;
                 clearInterval(this.shootInterval);
@@ -378,14 +459,10 @@ export class Player1 extends Player {
 
                 this.scene.traverse(child => {
                     if (child.userData?.isMonster && child.userData.collider) {
-                        // Tạo bounding box cho monster
                         const monsterBox = new THREE.Box3().setFromObject(child.userData.collider);
 
-                        // Kiểm tra va chạm
                         if (obj.boundingSphere.intersectsBox(monsterBox)) {
-                            // Gọi hàm takeDamage của monster
                             if (typeof child.userData.takeDamage === 'function') {
-                                //child.userData.takeDamage(10);
                                 monstersToDamage.push(child);
                             }
                             hitSomething = true;
@@ -393,7 +470,6 @@ export class Player1 extends Player {
                     }
                 });
 
-                // Gọi takeDamage sau khi traverse xong
                 monstersToDamage.forEach(monster => {
                     if (typeof monster.userData.takeDamage === 'function') {
                         monster.userData.takeDamage(this.stats.DMG);
@@ -408,5 +484,5 @@ export class Player1 extends Player {
             return true;
         });
     }
-    
+
 }
