@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Settings - Bug Hunter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #000;
+      color: #0f0;
+      font-family: 'Press Start 2P', cursive;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    h1 {
+      margin-bottom: 40px;
+      font-size: 20px;
+      text-align: center;
+    }
+
+    .settings-box {
+      border: 2px solid #0f0;
+      padding: 30px 40px;
+      background-color: #111;
+      width: 400px;
+      max-width: 90%;
+    }
+
+    label {
+      display: block;
+      margin-top: 20px;
+      font-size: 12px;
+    }
+
+    select, input[type="checkbox"] {
+      margin-top: 5px;
+      padding: 6px;
+      font-size: 12px;
+      font-family: 'Press Start 2P', cursive;
+      background-color: #000;
+      color: #0f0;
+      border: 1px solid #0f0;
+      width: 100%;
+    }
+
+    .btn {
+      margin-top: 40px;
+      padding: 12px 20px;
+      background-color: #000;
+      border: 2px solid #0f0;
+      color: #0f0;
+      font-size: 14px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .btn:hover {
+      background-color: #0f0;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⚙ SETTINGS</h1>
+
+  <div class="settings-box">
+    <label for="difficulty">Difficulty</label>
+    <select id="difficulty">
+      <option value="easy">EASY</option>
+      <option value="medium" selected>MEDIUM</option>
+      <option value="hard">HARD</option>
+    </select>
+
+    <label>
+      <input type="checkbox" id="sound" checked>
+      SOUND ON
+    </label>
+
+    <label>
+      <input type="checkbox" id="music" checked>
+      MUSIC ON
+    </label>
+
+    <button class="btn" onclick="goBack()">← BACK</button>
+  </div>
+
+  <script>
+    function goBack() {
+      window.history.back(); // Quay lại trang trước (start screen)
+    }
+  </script>
+</body>
+</html>

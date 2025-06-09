@@ -86,9 +86,26 @@ window.addEventListener('roomDisposed', () => {
 });
 
 const clock = new THREE.Clock();
+
+let isPaused = false;
+
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'p') {
+        togglePause();
+    }
+});
+
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('pauseOverlay').style.display = isPaused ? 'flex' : 'none';
+}
+
 function animate() {
     const delta = clock.getDelta();
     requestAnimationFrame(animate);
+
+    if (isPaused) return;
+
     staticMeshes.forEach(mesh => {
         mesh.boundingBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
     }); //Update bounding boxes 4 obstacles

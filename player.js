@@ -57,6 +57,10 @@ export class Player {
         if (!this.isAlive) return;
         this.stats.Health -= damage;
         console.log(`Player takes ${damage} damage, health now ${this.stats.Health}`);
+        const healthDisplay = document.getElementById('health');
+        if (healthDisplay) {
+            healthDisplay.textContent = this.stats.Health;
+        }
         if (this.stats.Health <= 0) {
             this.die();
         }
@@ -65,6 +69,16 @@ export class Player {
         console.log('isAlive:', this.isAlive);
         if (!this.isAlive) return;
         this.isAlive = false;
+        
+        const overlay = document.getElementById('gameOverOverlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+        const backBtn = document.getElementById('backButton');
+        if (backBtn) {
+            backBtn.style.display = 'block';
+        }
+
         setTimeout(() => {
             this.model?.geometry?.dispose();
             this.scene.remove(this.model);
@@ -212,6 +226,17 @@ export class Player1 extends Player {
         );
         this.bulletTemplate.castShadow = true;
         this.shootInterval = null;
+        const updateStatsPanel = () => {
+            const healthDisplay = document.getElementById('health');
+            const dmgDisplay = document.getElementById('dmg');
+            const speedDisplay = document.getElementById('speed');
+
+            if (healthDisplay) healthDisplay.textContent = this.stats.Health;
+            if (dmgDisplay) dmgDisplay.textContent = this.stats.DMG;
+            if (speedDisplay) speedDisplay.textContent = this.stats.Speed;
+        };
+
+        updateStatsPanel();
     }
     loadModel() {
         this.loader.load('./Model/Male_MC.glb', (gltf) => {

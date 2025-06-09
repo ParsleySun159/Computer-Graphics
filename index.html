@@ -9,7 +9,104 @@
             padding: 0;
             overflow: hidden
         }
+
+        #statsButton {
+            position: absolute;
+            top: 50px;
+            left: 0px;
+            z-index: 10;
+            padding: 10px 18px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            background-color: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            cursor: pointer;
+        }
+
+        #statsButton:hover {
+            background-color: #0f0;
+            color: #000;
+        }
+
+        #statsPanel {
+            position: absolute;
+            top: 80px;
+            left: 0px;
+            width: 220px;
+            background-color: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            padding: 12px;
+            z-index: 10;
+            display: none;
+        }
+
+        .stat-line {
+            margin-bottom: 8px;
+        }
+
+        #gameOverOverlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #backButton {
+            padding: 12px 24px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            background-color: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            cursor: pointer;
+        }
+
+        #backButton:hover {
+            background-color: #0f0;
+            color: #000;
+        }
+
+        #pauseOverlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(6px);
+            z-index: 998;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #resumeButton {
+            padding: 12px 24px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            background-color: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            cursor: pointer;
+        }
+        
+        #pauseMessage {
+            color: #0f0;
+            font-size: 20px;
+            text-align: center;
+            animation: blink 1.2s step-end infinite;
+        }
     </style>
+
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
     <script type="importmap">
         {
           "imports": {
@@ -22,6 +119,56 @@
 </head>
 <body>
     <div id="webgl"></div>
+    <button id="statsButton" onclick="toggleStats()">STATS</button>
+
+    <div id="statsPanel">
+        <div class="stat-line">💀 Score: <span id="score">0</span></div>
+        <div class="stat-line">❤️ Health: <span id="health">100</span></div>
+        <div class="stat-line">🗡️ DMG: <span id="dmg">10</span></div>
+        <div class="stat-line">⚡ Speed: <span id="speed">5</span></div>
+        <div class="stat-line">🕒 Time: <span id="time">0</span>s</div>
+    </div>
+
+    <!-- Back button -->
+    <div id="gameOverOverlay">
+        <button id="backButton" onclick="goBack()">⬅ BACK</button>
+    </div>
+
+    <!-- Resume button -->
+    <div id="pauseOverlay">
+        <!--<button id="resumeButton" onclick="resumeGame()">▶ RESUME</button>-->
+        <div id="pauseMessage">▶ Press P to continue</div>
+    </div>
+
+    <!-- Stats logic -->
+    <script>
+        function toggleStats() {
+            const panel = document.getElementById('statsPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        let score = 0;
+        let seconds = 0;
+        //const savedScore = localStorage.getItem('lastScore');
+        /*if (savedScore !== null) {
+            score = parseInt(savedScore, 10);
+            document.getElementById('score').textContent = score;
+        }*/
+
+        setInterval(() => {
+            score += Math.floor(Math.random() * 5);
+            seconds++;
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('time').textContent = seconds;
+            localStorage.setItem('lastScore', score);
+        }, 1000);
+
+        function goBack() {
+            window.location.href = "start_screen.html";
+        }
+    </script>
+
     <script type="module" src="./main.js"></script>
     <script type="module">
         import Stats from "stats.js";

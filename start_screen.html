@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bug Hunter - Start</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+      color: #0f0;
+      font-family: 'Press Start 2P', cursive;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 40px;
+    }
+
+    .btn {
+      display: inline-block;
+      margin: 10px;
+      padding: 12px 24px;
+      background-color: #111;
+      border: 2px solid #0f0;
+      color: #0f0;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background-color: #0f0;
+      color: #000;
+    }
+
+    .description {
+      margin-top: 40px;
+      font-size: 10px;
+      color: #0f0;
+    }
+
+    .last-score {
+      margin-top: 20px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐞 Bug Hunter</h1>
+    <button class="btn" onclick="startGame()">▶ START</button>
+    <button class="btn" onclick="openSettings()">⚙ SETTINGS</button>
+
+    <div class="last-score" id="lastScoreDisplay"></div>
+
+    <div class="description">
+      Use arrow keys to move and shoot bugs!<br>
+      Be fast. Be accurate. Be a hunter.
+    </div>
+  </div>
+
+  <script>
+    function startGame() {
+      window.location.href = "index.html";
+    }
+
+    function openSettings() {
+      window.location.href = "setting.html";
+    }
+
+    // Show last score and best score
+    const savedScore = localStorage.getItem('lastScore');
+    if (savedScore !== null) {
+      document.getElementById('lastScoreDisplay').textContent = `Last Score: ${savedScore}`;
+    }
+    /*const bestScore = localStorage.getItem('bestScore');
+    if (bestScore !== null) {
+      document.getElementById('bestScoreDisplay').textContent = `Best Score: ${bestScore}`;
+    }*/
+  </script>
+</body>
+</html>
