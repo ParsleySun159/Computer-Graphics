@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'; //Load HDR map
-import { Monster } from './monster.js';
+import { BossWitch, Doll, Monster, Pixie, Slime } from './monster.js';
 export class Level extends THREE.Group {
     constructor(scene, player, staticMeshes, dynamicMeshes) {
         super();
@@ -47,6 +47,7 @@ export class Level extends THREE.Group {
                             monsters: [],
                         });
                         console.log('Room added: ', child.name);
+                        console.log(`Room ${child.name} spawnPoint:`, spawnPoint);
                     }
                     if (child.name.includes('Door')) {
                         child.visible = false;
@@ -98,21 +99,69 @@ export class Level extends THREE.Group {
                 });
             });
         }, undefined, (error) => {
-            console.error('Error loading Level.glb: ',error);
+            console.error('Error loading Level.glb: ', error);
         });
-        
+
     }
     spawnMonsters(room) {
-        const positions = [
-            new THREE.Vector3(0, 0, 5),
-            new THREE.Vector3(5, 0, 5),
-            new THREE.Vector3(5, 0, 0),
-            new THREE.Vector3(5, 0, -5),
-            new THREE.Vector3(0, 0, -5),
-        ];
-        for (let i = 0; i < positions.length; i++) {
-            const monster = new Monster(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, positions[i]);
-            room.monsters.push(monster);
+        let monsters = [];
+        switch (room.object.name) {
+            case 'Room1':
+                break;
+            case 'Room2':
+                monsters = [
+                    {type: 'Slime', position: new THREE.Vector3(0, 0, -28)},    
+                    {type: 'Slime', position: new THREE.Vector3(-5, 0, -30)},   
+                    {type: 'Pixie', position: new THREE.Vector3(0, 0, -32)},   
+                    {type: 'Pixie', position: new THREE.Vector3(0, 0, -34)},    
+                    {type: 'Pixie', position: new THREE.Vector3(-7, 0, -34)}    
+                ];
+                break;
+            case 'Room3':
+                monsters = [
+                    {type: 'Slime', position:new THREE.Vector3(-28, 0, -30)},    
+                    {type: 'Pixie', position:new THREE.Vector3(-26, 0, -32)},   
+                    {type: 'Pixie', position:new THREE.Vector3(-24, 0, -34)},   
+                    {type: 'Slime', position:new THREE.Vector3(-22, 0, -25)},    
+                    {type: 'Slime', position:new THREE.Vector3(-20, 0, -28)},
+                    {type: 'Doll', position:new THREE.Vector3(-20, 0, -25)}, 
+                    {type: 'Doll', position:new THREE.Vector3(-20, 0, -24)},   
+                ];
+                break;
+            case 'Room4':
+                monsters = [
+                    {type: 'Doll', position:new THREE.Vector3(20, 0, -25)},    
+                    {type: 'Doll', position:new THREE.Vector3(24, 0, -28)},   
+                    {type: 'Doll', position:new THREE.Vector3(26, 0, -30)},   
+                    {type: 'Doll', position:new THREE.Vector3(28, 0, -32)},    
+                    {type: 'Doll', position:new THREE.Vector3(22, 0, -34)},    
+                    {type: 'Witch', position:new THREE.Vector3(22, 0, -32)}  
+                ];
+            default:
+                break;
+        }
+
+        for(const monsterType of monsters){
+            let monster;
+            switch(monsterType.type){
+                case 'Slime':
+                    monster = new Slime(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position);
+                    break;
+                case 'Pixie':
+                    monster = new Pixie(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position);
+                    break;
+                case 'Doll':
+                    monster = new Doll(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position);
+                    break;
+                case 'Witch':
+                    monster = new BossWitch(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position);
+                    break;
+                default:
+                    break;
+            }
+            if(monster){
+                room.monsters.push(monster);
+            }
         }
     }
     isEnter(room) {
@@ -143,7 +192,7 @@ export class Level extends THREE.Group {
     }
     update(delta) {
         if (!this.mixer || !this.player.model || !this.player.model.position) {
-            return; 
+            return;
         }
         this.mixer.update(delta);
 
@@ -161,6 +210,8 @@ export class Level extends THREE.Group {
                     if (!this.currentRoom.states.isVisited) {
                         console.log('Room is visited for the first time: ', this.currentRoom.object.name);
                         this.currentRoom.states.isVisited = true;
+                        console.log('Room2 position:', this.rooms.get('Room2').object.position);
+                        this.spawnMonsters(this.currentRoom);
                     }
                 }
                 window.currentRoom = this.currentRoom;
@@ -179,7 +230,7 @@ export class Level extends THREE.Group {
                         monster.update(delta, this.currentRoom.monsters);
                     }
                 });
-                if(this.currentRoom.monsters.every(monster => !monster.isAlive)) {
+                if (this.currentRoom.monsters.every(monster => !monster.isAlive)) {
                     console.log('All monsters cleared in: ', this.currentRoom.object.name);
                     this.currentRoom.states.isCleared = true;
                 }

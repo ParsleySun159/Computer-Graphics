@@ -15,8 +15,9 @@ const camera = new THREE.PerspectiveCamera(
 camera.lookAt(0, 0, 0);
 
 //lighting
-const light = new THREE.DirectionalLight(0x111184, 0.8);
-light.position.set(0, 100, 0);
+//const light = new THREE.DirectionalLight(0x111184, 0.8);
+const light = new THREE.DirectionalLight(0xb0c4de, 2); //040348
+light.position.set(50, 100, 50);
 light.castShadow = true;
 light.shadow.bias = -0.0001; //giam artifact
 scene.add(light);
@@ -27,8 +28,11 @@ light.shadow.camera.top = 30;
 light.shadow.camera.bottom = -30;
 light.shadow.camera.near = 0.1;
 light.shadow.camera.far = 500;
-light.shadow.mapSize.width = 2048; 
-light.shadow.mapSize.height = 2048;
+/*light.shadow.mapSize.width = 2048; 
+light.shadow.mapSize.height = 2048;*/
+
+light.shadow.mapSize.width = 1024; 
+light.shadow.mapSize.height = 1024;
 
 const hemisphereLight = new THREE.HemisphereLight(0xFFB100, 0x111184, -0.2);
 scene.add(hemisphereLight);
@@ -113,7 +117,6 @@ function animate() {
     player.update(delta);
     level.update(delta);
     
-
     pointLight.position.set(player?.model?.position.x, player?.model?.position.y + 0.5, player?.model?.position.z);
     renderer.render(scene, camera);
 }
