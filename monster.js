@@ -71,6 +71,19 @@ export class Monster {
         });
     }
     createhitbox() { }
+    pushPlayerBack(pushForce) {
+        const playerPosition = this.player.model.position.clone();
+        const monsterPosition = this.monster.position.clone();
+
+        const pushDir = new THREE.Vector3(
+            playerPosition.x - monsterPosition.x,
+            0,
+            playerPosition.z - monsterPosition.z
+        ).normalize();
+
+        const velocity = pushDir.multiplyScalar(pushForce);
+        this.player.getPushVelocity(velocity);
+    }
     onModelLoad(gltfMonster) { }
 
     addHealthBar() {
@@ -124,7 +137,7 @@ export class Monster {
         this.dynamicMeshes.forEach((item, index) => {
             if (!this.monster || !this.monster.userData.isAlive) {
                 this.scene.remove(item.mesh);
-                this.dynamicMeshes.splice(i, 1);
+                this.dynamicMeshes.splice(index, 1);
             }
             const move = item.direction.clone().multiplyScalar(item.speed * delta);
             item.mesh.position.add(move);
@@ -335,7 +348,7 @@ export class Slime extends Monster {
         if (slimeBox.intersectsBox(playerBox)) {
             this.player.takeDamage(this.attackDamage);
             this.lastAttack = currenttime;
-            //this.pushPlayerBack();
+            this.pushPlayerBack(1.0);
             console.log(`Slime hit player for ${this.attackDamage} damage`);
         }
     }
@@ -371,14 +384,6 @@ export class Slime extends Monster {
         this.monster.add(monsterHitbox);
         this.monster.userData.collider = monsterHitbox;
     }
-
-    pushPlayerBack() {
-        const playerPosition = this.player.model.position;
-        const monsterPosition = this.monster.position;
-        const pushDir = new THREE.Vector3().subVectors(playerPosition, monsterPosition).normalize();
-        const pushForce = 1.5;
-        playerPosition.add(pushDir.multiplyScalar(pushForce));
-    }
 }
 
 export class Pixie extends Monster {
@@ -404,7 +409,7 @@ export class Pixie extends Monster {
 
     createhitbox() {
         const monsterHitbox = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 1, 0.5),
+            new THREE.BoxGeometry(0.5, 2, 0.5),
             new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
         );
         monsterHitbox.name = 'monsterHitbox';
@@ -673,23 +678,8 @@ export class Doll extends Monster {
             this.action['Jump'].reset().play();
             this.player.takeDamage(this.attackDamage);
             this.lastAttack = currenttime;
-            //this.pushPlayerBack();
+            this.pushPlayerBack(2.0);
         }
-    }
-
-    pushPlayerBack() {
-        const playerPosition = this.player.model.position.clone();
-        const monsterPosition = this.monster.position.clone();
-
-        const pushDir = new THREE.Vector3(
-            playerPosition.x - monsterPosition.x,
-            0,
-            playerPosition.z - monsterPosition.z
-        ).normalize();
-
-        const pushForce = 1.0;
-        this.player.model.position.x += pushDir.x * pushForce;
-        this.player.model.position.z += pushDir.z * pushForce;
     }
 }
 

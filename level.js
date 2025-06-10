@@ -110,20 +110,20 @@ export class Level extends THREE.Group {
                 break;
             case 'Room2':
                 monsters = [
-                    {type: 'Slime', position: new THREE.Vector3(0, 0, -28)},    
-                    {type: 'Slime', position: new THREE.Vector3(-5, 0, -30)},   
-                    {type: 'Pixie', position: new THREE.Vector3(0, 0, -32)},   
-                    {type: 'Pixie', position: new THREE.Vector3(0, 0, -34)},    
-                    {type: 'Pixie', position: new THREE.Vector3(-7, 0, -34)}    
+                    {type: 'Slime', position: new THREE.Vector3(0, 0.1, -28)},    
+                    {type: 'Slime', position: new THREE.Vector3(-5, 0.1, -30)},   
+                    {type: 'Pixie', position: new THREE.Vector3(0, 1, -32)},   
+                    {type: 'Pixie', position: new THREE.Vector3(0, 1, -34)},    
+                    {type: 'Pixie', position: new THREE.Vector3(-7, 1, -34)}    
                 ];
                 break;
             case 'Room3':
                 monsters = [
-                    {type: 'Slime', position:new THREE.Vector3(-28, 0, -30)},    
-                    {type: 'Pixie', position:new THREE.Vector3(-26, 0, -32)},   
-                    {type: 'Pixie', position:new THREE.Vector3(-24, 0, -34)},   
-                    {type: 'Slime', position:new THREE.Vector3(-22, 0, -25)},    
-                    {type: 'Slime', position:new THREE.Vector3(-20, 0, -28)},
+                    {type: 'Slime', position:new THREE.Vector3(-28, 0.1, -30)},    
+                    {type: 'Pixie', position:new THREE.Vector3(-26, 1, -32)},   
+                    {type: 'Pixie', position:new THREE.Vector3(-24, 1, -34)},   
+                    {type: 'Slime', position:new THREE.Vector3(-22, 0.1, -25)},    
+                    {type: 'Slime', position:new THREE.Vector3(-20, 0.1, -28)},
                     {type: 'Doll', position:new THREE.Vector3(-20, 0, -25)}, 
                     {type: 'Doll', position:new THREE.Vector3(-20, 0, -24)},   
                 ];

@@ -29,6 +29,7 @@ export class Player {
             DMG: 20,
             Speed: 5
         };
+        this.pushVelocity = new THREE.Vector3(0, 0, 0);
         this.isAlive = true;
         this.isFlashing = false;
 
@@ -74,7 +75,7 @@ export class Player {
             healthDisplay.textContent = this.stats.Health;
         }
         if (this.stats.Health <= 0) {
-            //this.die();
+            this.die();
         }
     }
     flashRed() {
@@ -135,6 +136,9 @@ export class Player {
         }, 1000);
         this.model = null;
     }
+    getPushVelocity(velocity){
+        this.pushVelocity.copy(velocity);
+    }
     update(delta) {
         if (!this.model || !this.mixer) return;
 
@@ -154,7 +158,8 @@ export class Player {
         if (this.keysPressed['a']) direction.x -= 1;
         if (this.keysPressed['d']) direction.x += 1;
 
-        let isMoving = direction.lengthSq() > 0;
+        let isMoving = direction.lengthSq() > 0 || this.pushVelocity.length() > 0.01;
+        
         if (isMoving) {
             direction.normalize();
             if (!this.model.userData.isWalk) {
@@ -166,12 +171,19 @@ export class Player {
             const moveSpeed = delta * 2 * this.stats.Speed;
             this.action['Walking'].timeScale = 0.75 + this.stats.Speed / 4;
             this.model.position.addScaledVector(direction, moveSpeed);
-            this.model.updateMatrixWorld(true);
 
+            //Push back
+            this.model.position.addScaledVector(this.pushVelocity.clone(), delta*10);
+            this.pushVelocity.multiplyScalar(0.9); //decay
+            if(this.pushVelocity.length() < 0.01) {
+                this.pushVelocity.set(0, 0, 0);
+            }
+            
+            this.model.updateMatrixWorld(true);
             this.model.userData.collider.updateMatrixWorld();
             const playerBox = new THREE.Box3().setFromCenterAndSize(
                 new THREE.Vector3().setFromMatrixPosition(this.model.userData.collider.matrixWorld),
-                new THREE.Vector3(0.8, 1.6, 0.8)
+                new THREE.Vector3(0.4, 1.6, 0.4)
             );
 
             let collided = false;
@@ -191,7 +203,7 @@ export class Player {
                 this.model.userData.collider.updateMatrixWorld();
                 playerBox.setFromCenterAndSize(
                     new THREE.Vector3().setFromMatrixPosition(this.model.userData.collider.matrixWorld),
-                    new THREE.Vector3(0.5, 1.8, 0.5)
+                    new THREE.Vector3(0.4, 1.6, 0.4)
                 );
                 if (this.staticMeshes.some(mesh => playerBox.intersectsBox(mesh.boundingBox))) {
                     this.model.position.x = prevPosition.x; // cancel X move
@@ -203,13 +215,13 @@ export class Player {
                 this.model.userData.collider.updateMatrixWorld();
                 playerBox.setFromCenterAndSize(
                     new THREE.Vector3().setFromMatrixPosition(this.model.userData.collider.matrixWorld),
-                    new THREE.Vector3(0.5, 1.8, 0.5)
+                    new THREE.Vector3(0.4, 1.6, 0.4)
                 );
                 if (this.staticMeshes.some(mesh => playerBox.intersectsBox(mesh.boundingBox))) {
                     this.model.position.z = prevPosition.z; // cancel Z move
                 }
             }
-            else if (!this.model.userData.isAim) { //Xoay khi k ban
+            else if (!this.model.userData.isAim) {
                 const targetAngle = Math.atan2(direction.x, direction.z);
                 this.currentRotationY = lerpAngle(this.currentRotationY, targetAngle, delta * 5);
                 this.model.rotation.y = this.currentRotationY;
