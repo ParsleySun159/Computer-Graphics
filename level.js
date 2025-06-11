@@ -65,7 +65,7 @@ export class Level extends THREE.Group {
                             },
                             monsters: [],
                             spikes: [],
-                            boxes: []
+                            boxes: [],
                             items: [],
                         });
                         console.log('Room added: ', child.name);
