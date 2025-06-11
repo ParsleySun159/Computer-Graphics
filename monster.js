@@ -347,7 +347,7 @@ export class Slime extends Monster {
         const distanceToPlayer = monsterPosition.distanceTo(playerPosition);
 
         // if player is within detection range
-        if (distanceToPlayer <= this.detectionRange) {
+        if (distanceToPlayer <= this.detectionRange && this.canSeePlayer()) {
             this.MovetoPlayer(delta, playerPosition);
             this.performAttack();
         }
@@ -435,12 +435,12 @@ export class Pixie extends Monster {
 
     createhitbox() {
         const monsterHitbox = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 2, 0.5),
+            new THREE.BoxGeometry(0.6, 0.6, 0.6),
             new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
         );
         monsterHitbox.name = 'monsterHitbox';
         monsterHitbox.visible = false;
-        monsterHitbox.position.set(0, monsterHitbox.position.y / 2 + 1, 0);
+        monsterHitbox.position.set(0, 0, 0);
         this.monster.add(monsterHitbox);
         this.monster.userData.collider = monsterHitbox;
     }
@@ -452,7 +452,7 @@ export class Pixie extends Monster {
         const distanceToPlayer = monsterPosition.distanceTo(playerPosition);
 
         // if player is within detection range
-        if (distanceToPlayer <= this.detectionRange) {
+        if (distanceToPlayer <= this.detectionRange && this.canSeePlayer()) {
             if (distanceToPlayer > this.attackRange) {
                 this.MovetoPlayer(delta, playerPosition);
                 if (this.action['Shoot'] && this.action['Shoot'].isRunning()) {
@@ -570,7 +570,10 @@ export class Doll extends Monster {
             this.updateJump(delta);
         }
         if(this.monster){
-            if(this.monster.position.y !== this.targetY){
+            if(Math.abs(this.monster.position.y - this.targetY) < 0.01){
+                this.monster.position.y = this.targetY;
+            }
+            else {
                 this.monster.position.y += (this.targetY - this.monster.position.y) * delta * 5;
             }
             if(this.monster.position.y <= -1.5){
@@ -606,7 +609,6 @@ export class Doll extends Monster {
         this.MovetoPlayer(delta, playerPosition);
         // if player is within detection range
         if (distanceToPlayer <= this.detectionRange) {
-            console.log('isHidden:', this.isHidden);
             if (this.isHidden) {
                 if (distanceToPlayer <= this.attackRange) {
                     this.reveal();
@@ -826,7 +828,7 @@ export class BossWitch extends Monster {
         const distanceToPlayer = monsterPosition.distanceTo(playerPosition);
 
         // if player is within detection range
-        if (distanceToPlayer <= this.detectionRange) {
+        if (distanceToPlayer <= this.detectionRange && this.canSeePlayer()) {
             if (distanceToPlayer > this.attackRange) {
                 this.MovetoPlayer(delta, playerPosition);
                 if (this.action['Shoot'] && this.action['Shoot'].isRunning()) {
