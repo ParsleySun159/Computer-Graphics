@@ -168,7 +168,7 @@ export class BaseItem {
     }
     dispose() {
         if (this.mesh) {
-            if (this.mesh.parent) this.mesh.parent.remove(this.mesh);  // ⬅️ THIS removes it from scene
+            if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
             if (this.mesh.geometry) this.mesh.geometry.dispose();
             if (this.mesh.material) {
                 if (Array.isArray(this.mesh.material)) {
