@@ -707,7 +707,7 @@ export class Doll extends Monster {
         }
             //this.pushPlayerBack();
             console.log(`Doll hit player for ${this.attackDamage + this.getDamageModifier()} damage`);
-        }
+        //}
     }
 
     pushPlayerBack() {
