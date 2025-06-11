@@ -27,7 +27,7 @@ export class Player {
             MaxHealth: 200,
             Health: 200,
             DMG: 20,
-            Speed: 5
+            Speed: 4
         };
         this.pushVelocity = new THREE.Vector3(0, 0, 0);
         this.isAlive = true;
@@ -131,6 +131,7 @@ export class Player {
         this.model = null;
     }
     getPushVelocity(velocity){
+        if(velocity.length() <= this.pushVelocity.length()) return;
         this.pushVelocity.copy(velocity);
     }
     update(delta) {
@@ -163,12 +164,12 @@ export class Player {
             }
 
             const moveSpeed = delta * 2 * this.stats.Speed;
-            this.action['Walking'].timeScale = 0.75 + this.stats.Speed / 4;
+            this.action['Walking'].timeScale = 0.75 + Math.min(this.stats.Speed / 4, 1.25);
             this.model.position.addScaledVector(direction, moveSpeed);
 
             //Push back
-            this.model.position.addScaledVector(this.pushVelocity.clone(), delta*10);
-            this.pushVelocity.multiplyScalar(0.9); //decay
+            this.model.position.addScaledVector(this.pushVelocity.clone(), delta*15);
+            this.pushVelocity.multiplyScalar(Math.exp(-delta*10));
             if(this.pushVelocity.length() < 0.01) {
                 this.pushVelocity.set(0, 0, 0);
             }
@@ -438,7 +439,7 @@ export class Player1 extends Player {
             this.mixer.removeEventListener('finished', this.OnGunUp);
             if (!this.shootInterval) {
                 this.Shoot();
-                this.shootInterval = setInterval(() => { this.Shoot(); }, 384); //1 lan ban moi ben = 8 frame * 24 frame rate * 2
+                this.shootInterval = setInterval(() => { this.Shoot(); }, 333);
             }
         }
     }

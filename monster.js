@@ -187,7 +187,9 @@ export class Monster {
             const minDistance = 1;
 
             if (distance < minDistance) {
-                const pushDir = new THREE.Vector3().subVectors(monPosition, otherPos).normalize();
+                const pushDir = new THREE.Vector3().subVectors(monPosition, otherPos);
+                pushDir.y = 0;
+                pushDir.normalize();
                 const pushStrength = (minDistance - distance) * 0.1;
 
                 this.monster.position.addScaledVector(pushDir, pushStrength);
@@ -345,7 +347,7 @@ export class Slime extends Monster {
         const distanceToPlayer = monsterPosition.distanceTo(playerPosition);
 
         // if player is within detection range
-        if (distanceToPlayer <= this.detectionRange) {
+        if (distanceToPlayer <= this.detectionRange && this.canSeePlayer()) {
             this.MovetoPlayer(delta, playerPosition);
             this.performAttack();
         }
@@ -433,12 +435,12 @@ export class Pixie extends Monster {
 
     createhitbox() {
         const monsterHitbox = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 2, 0.5),
+            new THREE.BoxGeometry(0.6, 0.6, 0.6),
             new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
         );
         monsterHitbox.name = 'monsterHitbox';
         monsterHitbox.visible = false;
-        monsterHitbox.position.set(0, monsterHitbox.position.y / 2 + 1, 0);
+        monsterHitbox.position.set(0, 0, 0);
         this.monster.add(monsterHitbox);
         this.monster.userData.collider = monsterHitbox;
     }
@@ -450,7 +452,7 @@ export class Pixie extends Monster {
         const distanceToPlayer = monsterPosition.distanceTo(playerPosition);
 
         // if player is within detection range
-        if (distanceToPlayer <= this.detectionRange) {
+        if (distanceToPlayer <= this.detectionRange && this.canSeePlayer()) {
             if (distanceToPlayer > this.attackRange) {
                 this.MovetoPlayer(delta, playerPosition);
                 if (this.action['Shoot'] && this.action['Shoot'].isRunning()) {
@@ -547,16 +549,17 @@ export class Doll extends Monster {
             attackDamage: 15,
             moveSpeed: 3,
             modelPath: './Model/Doll.glb',
-            attackRange: 5.0,
+            attackRange: 4.0,
             detectionRange: 20,
             scale: { x: 1.0, y: 1.0, z: 1.0 },
-            attackCoolDown: 5000
+            attackCoolDown: 2000
         });
 
         this.jumperTimer = 0;
         this.isJumping = false;
         this.isHidden = true;
         this.originalY = position.y;
+        this.targetY = position.y;
         this.scoreValue = 25;
     }
 
@@ -565,6 +568,20 @@ export class Doll extends Monster {
         if (this.isJumping) {
             this.jumperTimer += delta;
             this.updateJump(delta);
+        }
+        if(this.monster){
+            if(Math.abs(this.monster.position.y - this.targetY) < 0.01){
+                this.monster.position.y = this.targetY;
+            }
+            else {
+                this.monster.position.y += (this.targetY - this.monster.position.y) * delta * 5;
+            }
+            if(this.monster.position.y <= -1.5){
+                this.monster.visible = false;
+            }
+            else {
+                this.monster.visible = true;
+            }
         }
     }
 
@@ -588,19 +605,22 @@ export class Doll extends Monster {
         const playerBox = new THREE.Box3().setFromObject(this.player.model.userData.collider);
         const isOverlap = DollBox.intersectsBox(playerBox);
 
+        
+        this.MovetoPlayer(delta, playerPosition);
         // if player is within detection range
         if (distanceToPlayer <= this.detectionRange) {
-            console.log('isHidden:', this.isHidden);
             if (this.isHidden) {
                 if (distanceToPlayer <= this.attackRange) {
                     this.reveal();
                 }
             }
-            if (!this.isHidden) {
-                this.MovetoPlayer(delta, playerPosition);
+            else {
+                if (distanceToPlayer > this.attackRange * 1.2) {
+                    this.hide();
+                }
             }
 
-            if (isOverlap) { //this.attackRange >= distanceToPlayer
+            if (isOverlap) {
                 this.performAttack();
             }
         }
@@ -644,7 +664,7 @@ export class Doll extends Monster {
         this.isJumping = true;
         this.jumperTimer = 0;
         this.monster.visible = true;
-        this.monster.position.y = this.originalY;
+        this.targetY = this.originalY;
 
         if (this.action['Jump']) {
             this.action['Jump'].reset().play();
@@ -658,8 +678,7 @@ export class Doll extends Monster {
         this.isHidden = true;
         this.isJumping = false;
         this.jumperTimer = 0;
-        this.monster.visible = false;
-        this.monster.position.y = this.originalY - 3;
+        this.targetY = -2;
         if (this.action['Jump']) this.action['Jump'].stop();
         if (this.action['Walking']) this.action['Walking'].stop();
     }
@@ -670,9 +689,7 @@ export class Doll extends Monster {
         this.jumperTimer += delta;
 
         const jumpProgress = this.jumperTimer / jumpDuration;
-        const yPos = this.originalY + Math.sin(jumpProgress * Math.PI) * jumpHeight;
-        this.monster.position.y = yPos;
-
+        this.monster.position.y = + Math.sin(jumpProgress * Math.PI) * jumpHeight;
 
         if (this.jumperTimer >= jumpDuration) {
             this.monster.position.y = this.originalY;
@@ -682,7 +699,7 @@ export class Doll extends Monster {
             // Return to walking animation after jump
             if (this.action['Walking'] && !this.attackState) {
                 this.action['Jump'].stop();
-                this.action['Walking'].play();
+                this.action['Walking'].reset().fadeIn(0.3).play();
             }
         }
     }
@@ -705,25 +722,8 @@ export class Doll extends Monster {
             this.lastAttack = currenttime;
             this.pushPlayerBack(2.0);
         }
-            //this.pushPlayerBack();
-            console.log(`Doll hit player for ${this.attackDamage + this.getDamageModifier()} damage`);
-        //}
+        console.log(`Doll hit player for ${this.attackDamage + this.getDamageModifier()} damage`);
     }
-
-    /*pushPlayerBack() {
-        const playerPosition = this.player.model.position.clone();
-        const monsterPosition = this.monster.position.clone();
-
-        const pushDir = new THREE.Vector3(
-            playerPosition.x - monsterPosition.x,
-            0,
-            playerPosition.z - monsterPosition.z
-        ).normalize();
-
-        const pushForce = 1.0;
-        this.player.model.position.x += pushDir.x * pushForce;
-        this.player.model.position.z += pushDir.z * pushForce;
-    }*/
 }
 
 
@@ -805,6 +805,14 @@ export class BossWitch extends Monster {
                     if (this.action['Attack'] && this.action['Attack'].isRunning()) {
                         this.action['Attack'].stop();
                     }
+
+                    let event = new CustomEvent('spawnMonsterWave', {
+                        detail: {
+                            position: this.monster.position.clone(),
+                            count: Math.floor((Math.random() * 3) + 1),
+                        }
+                    });
+                    window.dispatchEvent(event);
                 }
             };
 
@@ -820,7 +828,7 @@ export class BossWitch extends Monster {
         const distanceToPlayer = monsterPosition.distanceTo(playerPosition);
 
         // if player is within detection range
-        if (distanceToPlayer <= this.detectionRange) {
+        if (distanceToPlayer <= this.detectionRange && this.canSeePlayer()) {
             if (distanceToPlayer > this.attackRange) {
                 this.MovetoPlayer(delta, playerPosition);
                 if (this.action['Shoot'] && this.action['Shoot'].isRunning()) {
