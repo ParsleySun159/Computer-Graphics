@@ -15,12 +15,12 @@ const camera = new THREE.PerspectiveCamera(
 camera.lookAt(0, 0, 0);
 
 //lighting
-//const light = new THREE.DirectionalLight(0x111184, 0.8);
-const light = new THREE.DirectionalLight(0xb0c4de, 2); //040348
-light.position.set(50, 100, 50);
+const light = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+light.position.set(0, 5, 0);
 light.castShadow = true;
-light.shadow.bias = -0.0001; //giam artifact
+light.shadow.bias = -0.0001;
 scene.add(light);
+scene.add(light.target);
 //Camera frostum, so cang nho thi vung nhan shadow cang nho(de bi clipping)
 light.shadow.camera.left = -30;
 light.shadow.camera.right = 30;
@@ -28,17 +28,15 @@ light.shadow.camera.top = 30;
 light.shadow.camera.bottom = -30;
 light.shadow.camera.near = 0.1;
 light.shadow.camera.far = 500;
-/*light.shadow.mapSize.width = 2048; 
-light.shadow.mapSize.height = 2048;*/
-
-light.shadow.mapSize.width = 1024; 
-light.shadow.mapSize.height = 1024;
+light.shadow.mapSize.width = 2048; 
+light.shadow.mapSize.height = 2048;
 
 const hemisphereLight = new THREE.HemisphereLight(0xFFB100, 0x111184, -0.2);
 scene.add(hemisphereLight);
+
 scene.fog = new THREE.FogExp2(0xFFFFFF, 0.02);
 
-const pointLight = new THREE.PointLight(0xFFFFFF, 1, 0, 2);
+const pointLight = new THREE.PointLight(0xFFFFFF, 1, 0, 2); //Player's glow
 scene.add(pointLight);
 
 const renderer = new THREE.WebGLRenderer();
@@ -226,6 +224,11 @@ function renderMinimap() {
     minimapRenderer.render(minimapScene, minimapCamera);
 }
 function animate() {
+    if (!player.model || !level.mapScene) {
+        requestAnimationFrame(animate);
+        return;
+    }
+
     const delta = clock.getDelta();
     requestAnimationFrame(animate);
 
@@ -233,11 +236,15 @@ function animate() {
 
     staticMeshes.forEach(mesh => {
         mesh.boundingBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
-    }); //Update bounding boxes 4 obstacles
+    });
 
     player.update(delta);
+    if (light.position.clone().distanceTo(player?.model?.position.clone()) > 20) {
+        light.position.set(player?.model?.position.x, player?.model?.position.y + 5, player?.model?.position.z);
+        light.target.position.set(player?.model?.position.x, player?.model?.position.y, player?.model?.position.z);
+    }
     level.update(delta);
-    
+
     pointLight.position.set(player?.model?.position.x, player?.model?.position.y + 0.5, player?.model?.position.z);
 
     if (player?.model) {
