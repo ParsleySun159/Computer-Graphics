@@ -131,6 +131,7 @@ export class Player {
         this.model = null;
     }
     getPushVelocity(velocity){
+        if(velocity.length() <= this.pushVelocity.length()) return;
         this.pushVelocity.copy(velocity);
     }
     update(delta) {
@@ -167,8 +168,8 @@ export class Player {
             this.model.position.addScaledVector(direction, moveSpeed);
 
             //Push back
-            this.model.position.addScaledVector(this.pushVelocity.clone(), delta*10);
-            this.pushVelocity.multiplyScalar(0.9); //decay
+            this.model.position.addScaledVector(this.pushVelocity.clone(), delta*15);
+            this.pushVelocity.multiplyScalar(Math.exp(-delta*5)); //decay
             if(this.pushVelocity.length() < 0.01) {
                 this.pushVelocity.set(0, 0, 0);
             }

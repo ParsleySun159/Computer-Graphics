@@ -187,7 +187,9 @@ export class Monster {
             const minDistance = 1;
 
             if (distance < minDistance) {
-                const pushDir = new THREE.Vector3().subVectors(monPosition, otherPos).normalize();
+                const pushDir = new THREE.Vector3().subVectors(monPosition, otherPos);
+                pushDir.y = 0;
+                pushDir.normalize();
                 const pushStrength = (minDistance - distance) * 0.1;
 
                 this.monster.position.addScaledVector(pushDir, pushStrength);
@@ -567,8 +569,16 @@ export class Doll extends Monster {
             this.jumperTimer += delta;
             this.updateJump(delta);
         }
-        if(this.monster && this.monster.position.y !== this.targetY){
-            this.monster.position.y += (this.targetY - this.monster.position.y) * delta * 5;
+        if(this.monster){
+            if(this.monster.position.y !== this.targetY){
+                this.monster.position.y += (this.targetY - this.monster.position.y) * delta * 5;
+            }
+            if(this.monster.position.y <= -1.5){
+                this.monster.visible = false;
+            }
+            else {
+                this.monster.visible = true;
+            }
         }
     }
 
@@ -666,8 +676,7 @@ export class Doll extends Monster {
         this.isHidden = true;
         this.isJumping = false;
         this.jumperTimer = 0;
-        this.targetY -= 2;
-        // this.monster.visible = false;
+        this.targetY = -2;
         if (this.action['Jump']) this.action['Jump'].stop();
         if (this.action['Walking']) this.action['Walking'].stop();
     }
@@ -711,25 +720,8 @@ export class Doll extends Monster {
             this.lastAttack = currenttime;
             this.pushPlayerBack(2.0);
         }
-            //this.pushPlayerBack();
-            console.log(`Doll hit player for ${this.attackDamage + this.getDamageModifier()} damage`);
-        //}
+        console.log(`Doll hit player for ${this.attackDamage + this.getDamageModifier()} damage`);
     }
-
-    /*pushPlayerBack() {
-        const playerPosition = this.player.model.position.clone();
-        const monsterPosition = this.monster.position.clone();
-
-        const pushDir = new THREE.Vector3(
-            playerPosition.x - monsterPosition.x,
-            0,
-            playerPosition.z - monsterPosition.z
-        ).normalize();
-
-        const pushForce = 1.0;
-        this.player.model.position.x += pushDir.x * pushForce;
-        this.player.model.position.z += pushDir.z * pushForce;
-    }*/
 }
 
 
