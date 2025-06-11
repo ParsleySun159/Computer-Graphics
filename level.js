@@ -113,8 +113,8 @@ export class Level extends THREE.Group {
                     {type: 'Slime', position: new THREE.Vector3(0, 0, -28)},    
                     {type: 'Slime', position: new THREE.Vector3(-5, 0, -30)},   
                     {type: 'Pixie', position: new THREE.Vector3(0, 0, -32)},   
-                    {type: 'Pixie', position: new THREE.Vector3(0, 0, -34)},    
-                    {type: 'Pixie', position: new THREE.Vector3(-7, 0, -34)}    
+                    {type: 'Pixie', position: new THREE.Vector3(0, 0, -34)},
+                    {type: 'Pixie', position: new THREE.Vector3(-7, 0, -34)}
                 ];
                 break;
             case 'Room3':
@@ -124,7 +124,7 @@ export class Level extends THREE.Group {
                     {type: 'Pixie', position:new THREE.Vector3(-24, 0, -34)},   
                     {type: 'Slime', position:new THREE.Vector3(-22, 0, -25)},    
                     {type: 'Slime', position:new THREE.Vector3(-20, 0, -28)},
-                    {type: 'Doll', position:new THREE.Vector3(-20, 0, -25)}, 
+                    {type: 'Doll', position:new THREE.Vector3(-20, 0, -25)},
                     {type: 'Doll', position:new THREE.Vector3(-20, 0, -24)},   
                 ];
                 break;
@@ -133,8 +133,8 @@ export class Level extends THREE.Group {
                     {type: 'Doll', position:new THREE.Vector3(20, 0, -25)},    
                     {type: 'Doll', position:new THREE.Vector3(24, 0, -28)},   
                     {type: 'Doll', position:new THREE.Vector3(26, 0, -30)},   
-                    {type: 'Doll', position:new THREE.Vector3(28, 0, -32)},    
-                    {type: 'Doll', position:new THREE.Vector3(22, 0, -34)},    
+                    {type: 'Doll', position:new THREE.Vector3(28, 0, -32)},
+                    {type: 'Doll', position:new THREE.Vector3(22, 0, -34)},   
                     {type: 'Witch', position:new THREE.Vector3(22, 0, -32)}  
                 ];
             default:
@@ -237,6 +237,10 @@ export class Level extends THREE.Group {
             }
             if (this.currentRoom.states.isCleared) {
                 this.isClear(this.currentRoom);
+            }
+            if (this.currentRoom.object.name === 'Room4' && this.currentRoom.states.isCleared && !this.levelCompleted) {
+                this.levelCompleted = true;
+                window.dispatchEvent(new Event('levelCleared'));
             }
         }
     }

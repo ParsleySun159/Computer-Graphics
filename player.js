@@ -74,7 +74,7 @@ export class Player {
             healthDisplay.textContent = this.stats.Health;
         }
         if (this.stats.Health <= 0) {
-            //this.die();
+            this.die();
         }
     }
     flashRed() {
@@ -118,15 +118,9 @@ export class Player {
         console.log('isAlive:', this.isAlive);
         if (!this.isAlive) return;
         this.isAlive = false;
-        
-        const overlay = document.getElementById('gameOverOverlay');
-        if (overlay) {
-            overlay.style.display = 'flex';
-        }
-        const backBtn = document.getElementById('backButton');
-        if (backBtn) {
-            backBtn.style.display = 'block';
-        }
+
+        const event = new CustomEvent('playerKilled');
+        window.dispatchEvent(event);
 
         setTimeout(() => {
             this.model?.geometry?.dispose();

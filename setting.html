@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Settings - Bug Hunter</title>
+  <title>Bug Hunter - Settings</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body, html {
@@ -38,7 +38,7 @@
       font-size: 12px;
     }
 
-    select, input[type="checkbox"] {
+    select {
       margin-top: 5px;
       padding: 6px;
       font-size: 12px;
@@ -47,6 +47,12 @@
       color: #0f0;
       border: 1px solid #0f0;
       width: 100%;
+    }
+
+    input[type="checkbox"] {
+      margin-top: 5px;
+      accent-color: #0f0;
+      transform: scale(1.2); /* Optional: make checkbox larger */
     }
 
     .btn {
@@ -72,19 +78,14 @@
 
   <div class="settings-box">
     <label for="difficulty">Difficulty</label>
-    <select id="difficulty">
+    <select id="difficulty" onchange="saveDifficulty(this.value)">
       <option value="easy">EASY</option>
       <option value="medium" selected>MEDIUM</option>
       <option value="hard">HARD</option>
     </select>
 
     <label>
-      <input type="checkbox" id="sound" checked>
-      SOUND ON
-    </label>
-
-    <label>
-      <input type="checkbox" id="music" checked>
+      <input type="checkbox" id="music" onchange="toggleMusicSetting(this.checked)">
       MUSIC ON
     </label>
 
@@ -93,7 +94,25 @@
 
   <script>
     function goBack() {
-      window.history.back(); // Quay lại trang trước (start screen)
+      window.history.back();
+    }
+    // Load the stored setting on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const musicOn = localStorage.getItem('music') !== 'false';
+      document.getElementById('music').checked = musicOn;
+    });
+
+    function toggleMusicSetting(isChecked) {
+      localStorage.setItem('music', isChecked);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const storedDifficulty = localStorage.getItem('difficulty') || 'medium';
+      document.getElementById('difficulty').value = storedDifficulty;
+    });
+
+    function saveDifficulty(value) {
+      localStorage.setItem('difficulty', value);
     }
   </script>
 </body>

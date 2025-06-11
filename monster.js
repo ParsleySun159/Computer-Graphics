@@ -33,7 +33,26 @@ export class Monster {
         this.currentAction = null;
         this.attackTimer = 0.5;
 
+        this.scoreValue = 10;
+
         this.loadModel();
+    }
+
+    getDamageModifier()
+    {
+        const difficulty = localStorage.getItem('difficulty') || 'easy';
+        let damageModifier = 0;
+        switch (difficulty) {
+            case 'medium':
+                damageModifier = 5;
+                break;
+            case 'hard':
+                damageModifier = 10;
+                break;
+            default:
+                damageModifier = 0;
+        }
+        return damageModifier;
     }
 
     loadModel() {
@@ -130,7 +149,7 @@ export class Monster {
             item.mesh.position.add(move);
             if (item.mesh.position.distanceTo(this.player?.model?.position) < 1) {
                 if (this.player.isAlive) {
-                    this.player.takeDamage(10);
+                    this.player.takeDamage(this.attackDamage + this.getDamageModifier());
                 }
                 this.scene.remove(item.mesh);
                 this.dynamicMeshes.splice(index, 1);
@@ -283,6 +302,9 @@ export class Monster {
 
         this.isAlive = false;
         this.monster = null;
+
+        const event = new CustomEvent('monsterKilled', { detail: { score: this.scoreValue } });
+        window.dispatchEvent(event);
     }
 }
 
@@ -300,6 +322,7 @@ export class Slime extends Monster {
             scale: { x: 0.8, y: 0.8, z: 0.8 },
             attackCoolDown: 2000
         });
+        this.scoreValue = 10;
     }
 
     detectionandAttack(delta) {
@@ -333,10 +356,10 @@ export class Slime extends Monster {
         const playerBox = new THREE.Box3().setFromObject(this.player.model.userData.collider);
 
         if (slimeBox.intersectsBox(playerBox)) {
-            this.player.takeDamage(this.attackDamage);
+            this.player.takeDamage(this.attackDamage + this.getDamageModifier());
             this.lastAttack = currenttime;
             //this.pushPlayerBack();
-            console.log(`Slime hit player for ${this.attackDamage} damage`);
+            console.log(`Slime hit player for ${this.attackDamage + this.getDamageModifier()} damage`);
         }
     }
 
@@ -400,6 +423,7 @@ export class Pixie extends Monster {
         this.isFlying = false;
         this.wingsspeed = 1.5;
         this.isAttacking = false;
+        this.scoreValue = 15;
     }
 
     createhitbox() {
@@ -528,6 +552,7 @@ export class Doll extends Monster {
         this.isJumping = false;
         this.isHidden = true;
         this.originalY = position.y;
+        this.scoreValue = 25;
     }
 
     update(delta, monsters) {
@@ -671,9 +696,10 @@ export class Doll extends Monster {
         if (DollBox.intersectsBox(playerBox)) {
             this.action['Walking'].reset().stop();
             this.action['Jump'].reset().play();
-            this.player.takeDamage(this.attackDamage);
+            this.player.takeDamage(this.attackDamage + this.getDamageModifier());
             this.lastAttack = currenttime;
             //this.pushPlayerBack();
+            console.log(`Doll hit player for ${this.attackDamage + this.getDamageModifier()} damage`);
         }
     }
 
@@ -715,6 +741,7 @@ export class BossWitch extends Monster {
         this.waveAttackRange = 7;
         this.waveAttackDamage = 30;
         this.isWave = false;
+        this.scoreValue = 35;
     }
 
     update(delta, monsters) {
