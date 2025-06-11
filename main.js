@@ -117,6 +117,19 @@ window.addEventListener('monsterKilled', (e) => {
     //localStorage.setItem('lastScore', score);
 });
 
+window.addEventListener('speedBoost', (e) => {
+    const speedDisplay = document.getElementById('speed');
+    if (speedDisplay) {
+        speedDisplay.textContent = e.detail.speed;
+    }
+});
+window.addEventListener('playerHeal', (e) => {
+    const healthDisplay = document.getElementById('health');
+    if (healthDisplay) {
+        healthDisplay.textContent = e.detail.health;
+    }
+});
+
 window.addEventListener('playerKilled', (e) => {
     localStorage.setItem('lastScore', score);
     let bestScore = localStorage.getItem('bestScore');

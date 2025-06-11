@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'; //Load HDR map
 import { BossWitch, Doll, Monster, Pixie, Slime } from './monster.js';
+import { SpeedBoostItem, HealItem} from './item.js';
 export class Level extends THREE.Group {
     constructor(scene, player, staticMeshes, dynamicMeshes) {
         super();
@@ -45,6 +46,7 @@ export class Level extends THREE.Group {
                                 isDisposed: false
                             },
                             monsters: [],
+                            items: [],
                         });
                         console.log('Room added: ', child.name);
                         console.log(`Room ${child.name} spawnPoint:`, spawnPoint);
@@ -69,6 +71,7 @@ export class Level extends THREE.Group {
             window.rooms = this.rooms;
 
             this.spawnMonsters(this.currentRoom);
+            this.spawnItems(this.currentRoom);
 
             let event = new Event('levelLoaded');
             window.dispatchEvent(event);
@@ -114,7 +117,7 @@ export class Level extends THREE.Group {
                     {type: 'Slime', position: new THREE.Vector3(-5, 0.1, -30)},   
                     {type: 'Pixie', position: new THREE.Vector3(0, 1, -32)},   
                     {type: 'Pixie', position: new THREE.Vector3(0, 1, -34)},    
-                    {type: 'Pixie', position: new THREE.Vector3(-7, 1, -34)}    
+                    {type: 'Pixie', position: new THREE.Vector3(-7, 1, -34)}
                 ];
                 break;
             case 'Room3':
@@ -134,7 +137,7 @@ export class Level extends THREE.Group {
                     {type: 'Doll', position:new THREE.Vector3(24, 0, -28)},   
                     {type: 'Doll', position:new THREE.Vector3(26, 0, -30)},   
                     {type: 'Doll', position:new THREE.Vector3(28, 0, -32)},
-                    {type: 'Doll', position:new THREE.Vector3(22, 0, -34)},   
+                    {type: 'Doll', position:new THREE.Vector3(22, 0, -34)},
                     {type: 'Witch', position:new THREE.Vector3(22, 0, -32)}  
                 ];
             default:
@@ -164,6 +167,53 @@ export class Level extends THREE.Group {
             }
         }
     }
+
+    spawnItems(room) {
+        let items = [];
+
+        switch (room.object.name) {
+            case 'Room2':
+                items = [
+                    { type: 'SpeedBoost', position: new THREE.Vector3(3, 0.1, -28) },
+                    { type: 'Heal', position: new THREE.Vector3(-5, 0.1, -30) },
+                ];
+                break;
+            case 'Room3':
+                items = [
+                    { type: 'SpeedBoost', position: new THREE.Vector3(-28, 0.1, -30) },
+                    { type: 'Heal', position: new THREE.Vector3(-26, 1, -32) },
+                ];
+                break;
+            case 'Room4':
+                items = [
+                    { type: 'Heal', position: new THREE.Vector3(20, 0, -25) },
+                    { type: 'Heal', position: new THREE.Vector3(22, 0, -32) },
+                ];
+                break;
+            default:
+                break;
+        }
+
+        for (const itemDef of items) {
+            let item;
+            switch (itemDef.type) {
+                case 'SpeedBoost':
+                    item = new SpeedBoostItem(this.scene, this.player, itemDef.position, 6, 2, '/Model/speed_pickup.glb', new THREE.Vector3(0.5, 0.5, 0.5));
+                    break;
+                case 'Heal':
+                    item = new HealItem(this.scene, this.player, itemDef.position, '/Model/healing_potion.glb', new THREE.Vector3(0.5, 0.5, 0.5))
+                    break;
+                default:
+                    break;
+            }
+            if (item) {
+                room.items = room.items || [];
+                room.items.push(item);
+                //console.log("success")
+            }
+        }
+    }
+
     isEnter(room) {
         if (!room || !room.object) return;
         room.object.traverse((child) => {
@@ -179,6 +229,28 @@ export class Level extends THREE.Group {
     }
     isClear(room) {
         if (!room || !room.object) return;
+        if (room.items && Array.isArray(room.items)) {
+            room.items.forEach(item => {
+                if (item.geometry) {
+                    item.geometry.dispose();
+                }
+                if (item.material) {
+                    if (Array.isArray(item.material)) {
+                        item.material.forEach(mat => this.disposeMaterial(mat));
+                    } else {
+                        this.disposeMaterial(item.material);
+                    }
+                }
+                if (item.parent && item !== room.object) {
+                    item.parent.remove(item);
+                }
+                if (item.dispose && typeof item.dispose === 'function') {
+                    item.dispose();
+                }
+            });
+            room.items = [];
+        }
+
         room.object.traverse((child) => {
             if (child.isMesh && child.name.includes('Door')) {
                 if (child.position.y >= -5) {
@@ -212,6 +284,7 @@ export class Level extends THREE.Group {
                         this.currentRoom.states.isVisited = true;
                         console.log('Room2 position:', this.rooms.get('Room2').object.position);
                         this.spawnMonsters(this.currentRoom);
+                        this.spawnItems(this.currentRoom);
                     }
                 }
                 window.currentRoom = this.currentRoom;
@@ -228,6 +301,11 @@ export class Level extends THREE.Group {
                 this.currentRoom.monsters.forEach(monster => {
                     if (monster.isAlive) {
                         monster.update(delta, this.currentRoom.monsters);
+                    }
+                });
+                this.currentRoom.items.forEach(item => {
+                    if (item.isActive) {
+                        item.update(delta, this.currentRoom.items);
                     }
                 });
                 if (this.currentRoom.monsters.every(monster => !monster.isAlive)) {
@@ -253,11 +331,34 @@ export class Level extends THREE.Group {
         let event2 = new Event('roomDisposed');
         window.dispatchEvent(event2);
 
+        /*if (room.items && Array.isArray(room.items)) {
+            room.items.forEach(item => {
+                if (item.geometry) {
+                    item.geometry.dispose();
+                }
+                if (item.material) {
+                    if (Array.isArray(item.material)) {
+                        item.material.forEach(mat => this.disposeMaterial(mat));
+                    } else {
+                        this.disposeMaterial(item.material);
+                    }
+                }
+                if (item.parent && item !== room.object) {
+                    item.parent.remove(item);
+                }
+                if (item.dispose && typeof item.dispose === 'function') {
+                    item.dispose();
+                }
+            });
+            room.items = [];
+        }*/
+
         const objectsToRemove = [];
         room.object.traverse((child) => {
             if (child === room.object || child.name.startsWith('Room') || child.name.startsWith('Wall') || child.name.startsWith('Torch')) {
                 return;
             }
+  
             if (child.geometry) {
                 child.geometry.dispose();
             }
