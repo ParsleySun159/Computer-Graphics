@@ -246,6 +246,10 @@ export class Level extends THREE.Group {
             if (this.currentRoom.states.isCleared) {
                 this.isClear(this.currentRoom);
             }
+            if (this.currentRoom.object.name === 'Room4' && this.currentRoom.states.isCleared && !this.levelCompleted) {
+                this.levelCompleted = true;
+                window.dispatchEvent(new Event('levelCleared'));
+            }
         }
     }
     disposeRoom(room) {

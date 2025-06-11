@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="utf-8">
-    <title>test</title>
+    <title>Bug Hunter</title>
     <style type="text/css">
         html, body {
             margin: 0;
@@ -31,7 +31,7 @@
 
         #statsPanel {
             position: absolute;
-            top: 80px;
+            top: 90px;
             left: 0px;
             width: 220px;
             background-color: #000;
@@ -48,7 +48,7 @@
             margin-bottom: 8px;
         }
 
-        #gameOverOverlay {
+        /*#gameOverOverlay {
             display: none;
             position: absolute;
             inset: 0;
@@ -61,6 +61,17 @@
         }
 
         #backButton {
+            bottom:10px;
+            padding: 12px 24px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            background-color: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            cursor: pointer;
+        }
+        #restartButton {
+            top: 20px;
             padding: 12px 24px;
             font-family: 'Press Start 2P', cursive;
             font-size: 12px;
@@ -73,6 +84,48 @@
         #backButton:hover {
             background-color: #0f0;
             color: #000;
+        }*/
+        #gameOverOverlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: 'Press Start 2P', cursive;
+            color: #0f0;
+        }
+
+        .game-over-content {
+            text-align: center;
+        }
+
+        #gameOverOverlay h1 {
+            font-size: 20px;
+            margin-bottom: 24px;
+        }
+
+        #restartButton, #backButton {
+            width: 200px;
+            text-align: center;
+            margin: 10px;
+            padding: 12px 24px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            background-color: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        #restartButton:hover, #backButton:hover {
+            background-color: #0f0;
+            color: #000;
+            transform: scale(1.05);
         }
 
         #pauseOverlay {
@@ -99,9 +152,77 @@
         
         #pauseMessage {
             color: #0f0;
-            font-size: 20px;
+            font-size: 16px;
             text-align: center;
             animation: blink 1.2s step-end infinite;
+            font-family: 'Press Start 2P', cursive;
+        }
+        #congratsOverlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: 'Press Start 2P', cursive;
+            color: #0f0;
+            text-align: center;
+            animation: fadeOut 3s forwards;
+        }
+
+        #congratsOverlay h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #congratsOverlay p {
+            font-size: 12px;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+        #minimapContainer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            height: 200px;
+            border: 2px solid #0f0;
+            background-color: #000;
+            z-index: 20;
+        }
+
+        #minimap {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #startTip {
+            position: absolute;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            background-color: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px 18px;
+            z-index: 1000;
+            display: none;
+            animation: fadeTip 10s forwards;
+        }
+
+        @keyframes fadeTip {
+            0%   { opacity: 1; }
+            80%  { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
         }
     </style>
 
@@ -119,6 +240,9 @@
 </head>
 <body>
     <div id="webgl"></div>
+    <div id="minimapContainer">
+        <canvas id="minimap"></canvas>
+    </div>
     <button id="statsButton" onclick="toggleStats()">STATS</button>
 
     <div id="statsPanel">
@@ -131,14 +255,22 @@
 
     <!-- Back button -->
     <div id="gameOverOverlay">
-        <button id="backButton" onclick="goBack()">⬅ BACK</button>
+        <div class="game-over-content">
+            <h1>GAME OVER</h1>
+            <button id="restartButton" onclick="restartGame()">🔁 RESTART</button>
+            <button id="backButton" onclick="goBack()">⬅ BACK</button>
+        </div>
     </div>
 
     <!-- Resume button -->
     <div id="pauseOverlay">
         <!--<button id="resumeButton" onclick="resumeGame()">▶ RESUME</button>-->
-        <div id="pauseMessage">▶ Press P to continue</div>
+        <div id="pauseMessage">▶ Press p to continue</div>
+        <button id="restartButton" onclick="restartGame()">🔁 RESTART</button>
+        <button id="backButton" onclick="goBack()">⬅ BACK</button>
     </div>
+
+    <div id="startTip">Press p to stop</div>
 
     <!-- Stats logic -->
     <script>
@@ -147,7 +279,6 @@
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         }
 
-        let score = 0;
         let seconds = 0;
         //const savedScore = localStorage.getItem('lastScore');
         /*if (savedScore !== null) {
@@ -156,16 +287,16 @@
         }*/
 
         setInterval(() => {
-            score += Math.floor(Math.random() * 5);
             seconds++;
-
-            document.getElementById('score').textContent = score;
             document.getElementById('time').textContent = seconds;
-            localStorage.setItem('lastScore', score);
+            //localStorage.setItem('lastScore', score);
         }, 1000);
 
         function goBack() {
             window.location.href = "start_screen.html";
+        }
+        function restartGame() {
+            location.reload();
         }
     </script>
 

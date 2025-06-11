@@ -62,6 +62,7 @@
     <button class="btn" onclick="openSettings()">⚙ SETTINGS</button>
 
     <div class="last-score" id="lastScoreDisplay"></div>
+    <div class="last-score" id="bestScoreDisplay"></div>
 
     <div class="description">
       Use arrow keys to move and shoot bugs!<br>
@@ -83,10 +84,10 @@
     if (savedScore !== null) {
       document.getElementById('lastScoreDisplay').textContent = `Last Score: ${savedScore}`;
     }
-    /*const bestScore = localStorage.getItem('bestScore');
+    const bestScore = localStorage.getItem('bestScore');
     if (bestScore !== null) {
       document.getElementById('bestScoreDisplay').textContent = `Best Score: ${bestScore}`;
-    }*/
+    }
   </script>
 </body>
 </html>

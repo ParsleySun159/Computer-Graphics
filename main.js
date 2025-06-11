@@ -57,6 +57,7 @@ let level = new Level(scene, player, staticMeshes, dynamicMeshes);
 scene.add(level);
 
 
+
 function updateStaticMeshes(object, type) { //1: add, 0:dispose
     object.traverse((child) => {
         if (type == 1 && !staticMeshes.includes(child) && child.isMesh && !child.name.endsWith('_Ground') && !child.name.endsWith('Point') && !child.name.startsWith('Torch')) {
@@ -102,6 +103,126 @@ function togglePause() {
     document.getElementById('pauseOverlay').style.display = isPaused ? 'flex' : 'none';
 }
 
+let score = 0;
+let scoreDisplay = document.getElementById('score');
+function updateScore(points) {
+    score += points;
+    if (scoreDisplay) {
+        scoreDisplay.textContent = `${score}`;
+    }
+}
+
+window.addEventListener('monsterKilled', (e) => {
+    updateScore(e.detail.score);
+    //localStorage.setItem('lastScore', score);
+});
+
+window.addEventListener('playerKilled', (e) => {
+    localStorage.setItem('lastScore', score);
+    let bestScore = localStorage.getItem('bestScore');
+    if (bestScore !== null) {
+        if (score >= bestScore)
+        {
+            bestScore = score;
+        }
+        localStorage.setItem('bestScore', bestScore);
+    }
+    else {
+        localStorage.setItem('bestScore', score);
+    }
+
+    const overlay = document.getElementById('gameOverOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+    }
+
+    const backBtn = document.getElementById('backButton');
+    if (backBtn) {
+        backBtn.style.display = 'block';
+    }
+});
+
+window.addEventListener('levelCleared', () => {
+    localStorage.setItem('lastScore', score);
+    let bestScore = localStorage.getItem('bestScore');
+    if (bestScore !== null) {
+        if (score >= bestScore)
+        {
+            bestScore = score;
+        }
+        localStorage.setItem('bestScore', bestScore);
+    }
+    else {
+        localStorage.setItem('bestScore',score);
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'congratsOverlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '9999';
+    overlay.innerHTML = `
+        <h1 style="color:white; font-size:48px; margin-bottom:20px;">🎉 Congratulations!</h1>
+        <p style="color:white; font-size:24px;">You finished the level!</p>
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+        overlay.remove();
+    }, 20000);
+});
+
+// Setup minimap renderer and camera
+const minimapScene = new THREE.Scene();
+
+const minimapRenderer = new THREE.WebGLRenderer({
+    canvas: document.getElementById('minimap'),
+    antialias: true,
+    alpha: true,
+});
+minimapRenderer.setSize(200, 200);
+minimapRenderer.setClearColor(0x000000, 1);
+
+const minimapCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 0.1, 1000);
+minimapCamera.up.set(0, 0, -1);
+minimapCamera.lookAt(new THREE.Vector3(0, -1, 0));
+minimapCamera.position.set(0, 100, 0);
+
+const minimapDot = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff0000 })
+);
+minimapDot.scale.set(2, 2, 2);
+minimapScene.add(minimapDot);
+
+let level_ = new Level(minimapScene, player, staticMeshes, dynamicMeshes);
+minimapScene.add(level_);
+const light_ = new THREE.DirectionalLight(0xb0c4de, 2);
+light_.position.set(50, 100, 50);
+light_.castShadow = true;
+light_.shadow.bias = -0.0001;
+minimapScene.add(light_);
+
+function renderMinimap() {
+    if (!player?.model) return;
+
+    const playerPos = player.model.position;
+
+    minimapCamera.position.set(playerPos.x, 100, playerPos.z);
+    minimapCamera.lookAt(new THREE.Vector3(playerPos.x, 0, playerPos.z));
+
+    minimapDot.position.set(playerPos.x, 1, playerPos.z);
+
+    minimapRenderer.clear();
+    minimapRenderer.render(minimapScene, minimapCamera);
+}
 function animate() {
     if (!player.model || !level.mapScene) {
         requestAnimationFrame(animate);
@@ -125,6 +246,40 @@ function animate() {
     level.update(delta);
 
     pointLight.position.set(player?.model?.position.x, player?.model?.position.y + 0.5, player?.model?.position.z);
+
+    if (player?.model) {
+        const pos = player.model.position;
+        minimapDot.position.set(pos.x, 1, pos.z);
+
+        minimapCamera.position.set(pos.x, 100, pos.z);
+        minimapCamera.lookAt(new THREE.Vector3(pos.x, 0, pos.z));
+    }
     renderer.render(scene, camera);
+    renderMinimap();
 }
 animate();
+
+window.addEventListener('load', () => {
+    const tip = document.getElementById('startTip');
+    if (tip) {
+        tip.style.display = 'block';
+        setTimeout(() => {
+            tip.style.display = 'none';
+        }, 10000);
+    }
+});
+
+const bgMusic = new Audio('Sound/Bit_Quest.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 1;
+
+const musicSetting = localStorage.getItem('music');
+const musicEnabled = musicSetting === null || musicSetting === 'true';
+
+if (musicEnabled) {
+    bgMusic.play().catch((e) => {
+        document.addEventListener('click', () => {
+            bgMusic.play();
+        }, { once: true });
+    });
+}
