@@ -710,7 +710,7 @@ export class Doll extends Monster {
         //}
     }
 
-    pushPlayerBack() {
+    /*pushPlayerBack() {
         const playerPosition = this.player.model.position.clone();
         const monsterPosition = this.monster.position.clone();
 
@@ -723,7 +723,7 @@ export class Doll extends Monster {
         const pushForce = 1.0;
         this.player.model.position.x += pushDir.x * pushForce;
         this.player.model.position.z += pushDir.z * pushForce;
-    }
+    }*/
 }
 
 
