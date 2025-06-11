@@ -17,6 +17,20 @@ export class Level extends THREE.Group {
         this.action = {};
         this.player = player;
         this.loadMap();
+
+        window.addEventListener('spawnMonsterWave', (event) => {
+            const bossPosition = event.detail?.position;
+            const positions = [];
+            for (let i = 0; i < event.detail?.count; i++) {
+                const x = bossPosition.x + (Math.random() - 0.5) * 10;
+                const z = bossPosition.z + (Math.random() - 0.5) * 10;
+                positions.push(new THREE.Vector3(x, 1, z));
+            }
+            for (let i = 0; i < positions.length; i++) {
+                const monster = new Pixie(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, positions[i]);
+                this.currentRoom.monsters.push(monster);
+            }
+        });
     }
     loadMap() {
         this.loader.load('./Model/Level.glb', (gltf) => {
@@ -64,11 +78,7 @@ export class Level extends THREE.Group {
                 }
             });
             this.add(this.mapScene);
-            window.mapScene = this.mapScene;
             this.currentRoom = this.rooms.get('Room1');
-            window.rooms = this.rooms;
-
-            this.spawnMonsters(this.currentRoom);
 
             let event = new Event('levelLoaded');
             window.dispatchEvent(event);
@@ -131,10 +141,8 @@ export class Level extends THREE.Group {
             case 'Room4':
                 monsters = [
                     {type: 'Doll', position:new THREE.Vector3(20, 0, -25)},    
-                    {type: 'Doll', position:new THREE.Vector3(24, 0, -28)},   
-                    {type: 'Doll', position:new THREE.Vector3(26, 0, -30)},   
-                    {type: 'Doll', position:new THREE.Vector3(28, 0, -32)},    
-                    {type: 'Doll', position:new THREE.Vector3(22, 0, -34)},    
+                    {type: 'Doll', position:new THREE.Vector3(24, 0, -28)},
+                    {type: 'Doll', position:new THREE.Vector3(28, 0, -32)},   
                     {type: 'Witch', position:new THREE.Vector3(22, 0, -32)}  
                 ];
             default:
@@ -302,21 +310,3 @@ export class Level extends THREE.Group {
         this.children = [];
     }
 }
-
-/*export class Ground extends THREE.Mesh {
-  constructor(width, height) {
-      super()
-      this.width = width;
-      this.height = height;
-      this.createGeometry();
-      this.material = new THREE.MeshStandardMaterial({ color: 0x404040 });
-      this.rotation.x = -Math.PI / 2;
-      this.receiveShadow = true;
-  }
-
-  createGeometry() {
-      this.geometry?.dispose();
-      this.geometry = new THREE.PlaneGeometry(this.width, this.height);
-      this.geometry.computeVertexNormals();
-  }
-}*/
