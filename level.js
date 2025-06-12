@@ -103,8 +103,9 @@ export class Level extends THREE.Group {
                     this.mapScene.traverse((child) => {
                         if (child.name.startsWith('Torch')) {
                             const action = this.mixer.clipAction(clip, child);
-                            this.torchActions.set(child, action);
-                            action.reset().play(); // Initially play all
+                            this.action[clip.name] = action;
+                            this.torchActions.set(child, this.action[clip.name]);
+                            this.action['FireLoop'].reset().play();
                         }
                     });
                 } else {
@@ -112,9 +113,6 @@ export class Level extends THREE.Group {
                     this.action[clip.name] = act;
                 }
             });
-            if (this.action['FireLoop']) {
-                this.action['FireLoop'].reset().play();
-            }
         }, undefined, (error) => {
             console.error('Error loading Level.glb: ', error);
         });
@@ -158,12 +156,6 @@ export class Level extends THREE.Group {
                     {type: 'Witch', position:new THREE.Vector3(24, 0, -62)},
                     {type: 'Doll', position:new THREE.Vector3(14, 0, -72)},
                     {type: 'Doll', position:new THREE.Vector3(34, 0, -52)},
-                    {type: 'Doll', position:new THREE.Vector3(20, 0, -25)},    
-                    {type: 'Doll', position:new THREE.Vector3(24, 0, -28)},   
-                    {type: 'Doll', position:new THREE.Vector3(26, 0, -30)},   
-                    {type: 'Doll', position:new THREE.Vector3(28, 0, -32)},
-                    {type: 'Doll', position:new THREE.Vector3(22, 0, -34)},
-                    {type: 'Witch', position:new THREE.Vector3(22, 0, -32)}  
                 ];
             default:
                 break;
@@ -313,6 +305,7 @@ export class Level extends THREE.Group {
             });
             room.items = [];
         }
+        
 
         room.object.traverse((child) => {
             if (child.isMesh && child.name.includes('Door')) {
@@ -466,7 +459,7 @@ export class Level extends THREE.Group {
 
         const objectsToRemove = [];
         room.object.traverse((child) => {
-            if (child === room.object || child.name.startsWith('Room') || child.name.startsWith('Wall') || child.name.startsWith('Torch')) {
+            if (child === room.object || child.name.startsWith('Room') || child.name.startsWith('Wall') || !child.name.startsWith('Torch')) {
                 return;
             }
             if (child.isLight && child.name.startsWith('TorchLight')) {

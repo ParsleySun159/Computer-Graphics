@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-export class Spike {
+export class Props {
     constructor(scene, player, staticMeshes, position){
         this.scene = scene;
         this.player = player;
@@ -9,11 +9,17 @@ export class Spike {
         this.position = position;
         this.loader = new GLTFLoader();
         this.model = null;
+
+        this.loadModel();
+    }
+    loadModel(){}
+}
+export class Spike extends Props {
+    constructor(scene, player, staticMeshes, position){
+        super(scene, player, staticMeshes, position);
         this.cooldown = 5;
         this.originalY = position.y;
         this.targetY = position.y;
-
-        this.loadModel();
     }
 
     loadModel(){
@@ -86,5 +92,11 @@ export class Spike {
         const velocity = pushDir.multiplyScalar(1.0);
         this.player.takeDamage(5);
         this.player.getPushVelocity(velocity);
+    }
+}
+
+export class Crate extends Props {
+    constructor(scene, player, staticMeshes, position){
+        super(scene, player, staticMeshes, position);
     }
 }
