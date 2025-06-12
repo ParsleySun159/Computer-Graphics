@@ -488,14 +488,23 @@ export class Player1 extends Player {
 
                 let hitSomething = false;
                 let monstersToDamage = [];
+                let cratesToDamage = [];
 
                 this.scene.traverse(child => {
                     if (child.userData?.isMonster && child.userData.collider) {
                         const monsterBox = new THREE.Box3().setFromObject(child.userData.collider);
-
                         if (obj.boundingSphere.intersectsBox(monsterBox)) {
                             if (typeof child.userData.takeDamage === 'function') {
                                 monstersToDamage.push(child);
+                            }
+                            hitSomething = true;
+                        }
+                    }
+                    if (child.userData.isCrate && child.userData.collider) {
+                        const crateBox = child.userData.collider;
+                        if (obj.boundingSphere.intersectsBox(crateBox)) {
+                            if (typeof child.userData.takeDamage === 'function') {
+                                cratesToDamage.push(child);
                             }
                             hitSomething = true;
                         }
@@ -508,6 +517,12 @@ export class Player1 extends Player {
                     }
                 });
 
+                cratesToDamage.forEach(crate => {
+                    if (typeof crate.userData.takeDamage === 'function') {
+                        crate.userData.takeDamage();
+                    }
+                });
+
                 if (performance.now() - obj.userData.spawnTime > 2000 || hitSomething) {
                     this.scene.remove(obj);
                     return false;
@@ -516,5 +531,4 @@ export class Player1 extends Player {
             return true;
         });
     }
-
 }

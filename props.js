@@ -98,5 +98,85 @@ export class Spike extends Props {
 export class Crate extends Props {
     constructor(scene, player, staticMeshes, position){
         super(scene, player, staticMeshes, position);
+        this.durability = 3;
+    }
+    loadModel(){
+        this.loader.load('./Model/Crate.glb', (gltf) => {
+            this.model = gltf.scene;
+            this.model.userData ={
+                isCrate: true,
+                takeDamage: () => this.takeDamage(),
+            }
+
+            if(this.position){
+                this.model.position.copy(this.position);
+            }
+
+            this.model.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+
+            this.createhitbox();
+            this.scene.add(this.model);
+        });
+    }
+    createhitbox() {
+        this.model.traverse((child) => {
+            if(child.isMesh && child.name.startsWith('Crate')){
+                this.staticMeshes.push(child);
+                child.geometry.computeBoundingBox();
+
+                const bbox = child.geometry.boundingBox;
+                const centerY = (bbox.min.y + bbox.max.y) / 2;
+                const halfY = (bbox.max.y - bbox.min.y) / 2 * 1.5;
+                bbox.min.y = centerY - halfY;
+                bbox.max.y = centerY + halfY;
+
+                child.boundingBox = child.geometry.boundingBox.clone();
+                this.model.userData.collider = child.boundingBox;
+            }
+        });
+        console.log(this.model);
+    }
+    takeDamage() {
+        this.durability -= 1;
+        console.log(this.durability);
+        if(this.durability <= 0){
+            this.dispose();
+        }
+    }
+    dispose(){
+        this.model.traverse((child) => {
+            if (child.isMesh) {
+                if(child.name.startsWith('Crate')){
+                    const index = this.staticMeshes.indexOf(child);
+                    if (index !== -1) {
+                        this.staticMeshes.splice(index, 1);
+                    }
+                    if (child.boundingBox) {
+                        delete child.boundingBox;
+                    }
+                    if (this.model) {
+                        this.scene.remove(this.model);
+                    }
+                }
+                if (child.geometry) {
+                    child.geometry.dispose();
+                }
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => mat.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            }
+        });
+
+        this.model.userData.collider = null;
+        this.model = null;
     }
 }

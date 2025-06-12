@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BossWitch, Doll, Monster, Pixie, Slime } from './monster.js';
-import { Spike } from './props.js';
+import { Crate, Spike } from './props.js';
 
 import { SpeedBoostItem, HealItem} from './item.js';
 export class Level extends THREE.Group {
@@ -65,7 +65,7 @@ export class Level extends THREE.Group {
                             },
                             monsters: [],
                             spikes: [],
-                            boxes: [],
+                            crates: [],
                             items: [],
                         });
                         console.log('Room added: ', child.name);
@@ -223,6 +223,45 @@ export class Level extends THREE.Group {
         }
     }
 
+    spawnCrates(room){
+        const crateSize = new THREE.Vector3(0.5, 0.5, 0.5);
+        const count = Math.floor(Math.random()*3+3);
+        for(let i = 0; i < count; i++){
+            let validPos = null;
+            let attempts = 0;
+
+            while(attempts < 10){
+                const min = room.spawnPoint.min;
+                const max = room.spawnPoint.max;
+                const x = min.x + Math.random() * (max.x - min.x);
+                const z = min.z + Math.random() * (max.z - min.z);
+                const position = new THREE.Vector3(x, 0, z);
+
+                const tempBox = new THREE.Box3().setFromCenterAndSize(position, crateSize);
+
+                const isCollided = this.staticMeshes.some((mesh) => {
+                    if(!mesh.name.startsWith('Room') && mesh.boundingBox){
+                        const worldBox = mesh.boundingBox.clone().applyMatrix4(mesh.matrixWorld);
+                        return tempBox.intersectsBox(worldBox);
+                    }
+                    return false;
+                });
+
+                if(!isCollided){
+                    validPos = position;
+                    break
+                }
+                attempts++;
+            }
+
+            if(validPos){
+                const crate = new Crate(this.scene, this.player, this.staticMeshes, validPos);
+                room.crates.push(crate);
+                console.log(`Spawned crate at ${validPos.x}, ${validPos.y}, ${validPos.z} in ${room.object.name}`);
+            }
+        }
+    }
+
     spawnItems(room) {
         let items = [];
 
@@ -340,6 +379,7 @@ export class Level extends THREE.Group {
                         this.currentRoom.states.isVisited = true;
                         this.spawnMonsters(this.currentRoom);
                         this.spawnSpikes(this.currentRoom);
+                        this.spawnCrates(this.currentRoom);
                         this.spawnItems(this.currentRoom);
                     }
                     // Update torch animations and lights

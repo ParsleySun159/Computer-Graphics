@@ -31,7 +31,7 @@ light.shadow.camera.far = 500;
 light.shadow.mapSize.width = 2048; 
 light.shadow.mapSize.height = 2048;
 
-const hemisphereLight = new THREE.HemisphereLight(0xFFB100, 0x111184, -0.2);
+const hemisphereLight = new THREE.HemisphereLight(0xFFB100, 0x111184, 0.5);
 scene.add(hemisphereLight);
 
 scene.fog = new THREE.FogExp2(0xFFFFFF, 0.02);
