@@ -284,6 +284,13 @@ export class Level extends THREE.Group {
                     { type: 'Heal', position: new THREE.Vector3(22, 0, -32) },
                 ];
                 break;
+            case 'Room5':
+                items = [
+                    { type: 'SpeedBoost', position: new THREE.Vector3(14, 0, -72) },
+                    { type: 'Heal', position: new THREE.Vector3(24, 0, -62) },
+                    { type: 'Heal', position: new THREE.Vector3(34, 0, -52) },
+                ];
+                break;
             default:
                 break;
         }
