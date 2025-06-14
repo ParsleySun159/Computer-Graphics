@@ -511,6 +511,15 @@ export class Player1 extends Player {
                     }
                 });
 
+                for (let i = 0; i < this.staticMeshes.length; i++) {
+                    if(this.staticMeshes[i].name.includes('Wall') || this.staticMeshes[i].name.includes('Door')){
+                    const mesh = this.staticMeshes[i];
+                    if (obj.boundingSphere.intersectsBox(mesh.boundingBox)) {
+                        hitSomething = true;
+                        break;
+                    }}
+                }
+
                 monstersToDamage.forEach(monster => {
                     if (typeof monster.userData.takeDamage === 'function') {
                         monster.userData.takeDamage(this.stats.DMG);
