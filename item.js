@@ -128,7 +128,6 @@ export class BaseItem {
             this.mesh.scale.copy(this.scale);
             this.mesh.position.copy(this.position);
             this.scene.add(this.mesh);
-            console.log("success");
         }, undefined, (error) => {
             console.error("Error loading item model:", error);
             this.createPlaceholderMesh();
@@ -160,6 +159,7 @@ export class BaseItem {
 
         if (this.checkCollision()) {
             this.onPickup();
+            this.dispose();
         }
     }
 
@@ -167,25 +167,27 @@ export class BaseItem {
         throw new Error("onPickup() must be implemented by subclass");
     }
     dispose() {
-        if (this.mesh) {
-            if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
-            if (this.mesh.geometry) this.mesh.geometry.dispose();
-            if (this.mesh.material) {
-                if (Array.isArray(this.mesh.material)) {
-                    this.mesh.material.forEach(mat => mat.dispose());
+        if(!this.mesh) return;
+        this.mesh.traverse((child) => {
+            if(child === this.mesh) return;
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(mat => mat.dispose());
                 } else {
-                    this.mesh.material.dispose();
+                    child.material.dispose();
                 }
             }
-            this.mesh = null;
-        }
+            child = null;
+        });
+        if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
         this.isActive = false;
         console.log("dispose");
     }
 }
 
 export class SpeedBoostItem extends BaseItem {
-    constructor(scene, player, position, duration = 5, boostMultiplier = 2, modelPath = null, scale = new THREE.Vector3(1, 1, 1)) {
+    constructor(scene, player, position, modelPath = null, scale = new THREE.Vector3(1, 1, 1)) {
         super(
             scene,
             player,
@@ -194,8 +196,8 @@ export class SpeedBoostItem extends BaseItem {
             scale,
         );
 
-        this.duration = duration;
-        this.boostMultiplier = boostMultiplier;
+        this.duration = 5;
+        this.boostMultiplier = 1.5;
         this.originalSpeed = null;
     }
 
