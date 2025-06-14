@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BoneFilters, lerpAngle } from './animationUtils.js';
 
 export class Monster {
-    constructor(scene, player, staticMeshes, dynamicMeshes, position, options = {}) {
+    constructor(scene, player, staticMeshes, dynamicMeshes, position, options = {}, modifier = 1) {
         this.scene = scene;
         this.player = player;
         this.position = position
@@ -16,15 +16,14 @@ export class Monster {
         this.action = {};
 
         this.type = options.type;
-        this.tier = options.tier;
         this.moveSpeed = options.moveSpeed || 1.5;
         this.attackRange = options.attackRange;
         this.detectionRange = options.detectionRange;
         this.modelPath = options.modelPath;
         this.scale = options.scale;
-        this.health = options.health || null;
-        this.maxHealth = options.maxHealth;
-        this.attackDamage = options.attackDamage || null;
+        this.health = options.health * modifier || null;
+        this.maxHealth = options.maxHealth * modifier;
+        this.attackDamage = options.attackDamage * modifier || null;
         this.attackCoolDown = options.attackCoolDown;
 
         this.avoidanceForce = new THREE.Vector3();
@@ -38,23 +37,6 @@ export class Monster {
         this.loadModel();
     }
 
-    getDamageModifier()
-    {
-        const difficulty = localStorage.getItem('difficulty') || 'easy';
-        let damageModifier = 0;
-        switch (difficulty) {
-            case 'medium':
-                damageModifier = 5;
-                break;
-            case 'hard':
-                damageModifier = 10;
-                break;
-            default:
-                damageModifier = 0;
-        }
-        return damageModifier;
-    }
-
     loadModel() {
         this.loader.load(this.modelPath, (gltfMonster) => {
             this.monster = gltfMonster.scene;
@@ -64,7 +46,6 @@ export class Monster {
                 isAlive: true,
                 health: this.health,
                 type: this.type,
-                tier: this.tier,
                 collider: null,
                 takeDamage: (damage) => this.takeDamage(damage),
             };
@@ -154,20 +135,16 @@ export class Monster {
     detectionandAttack(delta) { }
     updateDynamicMesh(delta) {
         this.dynamicMeshes.forEach((item, index) => {
-            if (!this.monster || !this.monster.userData.isAlive) {
-                this.scene.remove(item.mesh);
-                this.dynamicMeshes.splice(index, 1);
-            }
             const move = item.direction.clone().multiplyScalar(item.speed * delta);
             item.mesh.position.add(move);
             if (item.mesh.position.distanceTo(this.player?.model?.position) < 1) {
                 if (this.player.isAlive) {
-                    this.player.takeDamage(this.attackDamage + this.getDamageModifier());
+                    this.player.takeDamage(this.attackDamage);
                 }
                 this.scene.remove(item.mesh);
                 this.dynamicMeshes.splice(index, 1);
             }
-            if (item.mesh.position.distanceTo(this.monster.position) > 50) {
+            if (item.mesh.position.distanceTo(this.monster.position) > 30) {
                 this.scene.remove(item.mesh);
                 this.dynamicMeshes.splice(index, 1);
             }
@@ -306,9 +283,17 @@ export class Monster {
             this.mixer.stopAllAction();
         }
 
-        this.dynamicMeshes = this.dynamicMeshes.filter(bullet =>
-            bullet.mesh.userData?.shooter !== this.monster
-        );
+        this.dynamicMeshes = this.dynamicMeshes.filter(bullet => {
+            if (bullet.mesh.userData?.shooter === this.monster){
+                this.scene.remove(bullet.mesh);
+                bullet.mesh.geometry.dispose();
+                if(bullet.mesh.material){
+                    bullet.mesh.material.dispose();
+                }
+                return false;
+            }
+            return true;
+        });
 
         const parent = this.monster.parent;
         if (parent) {
@@ -324,10 +309,9 @@ export class Monster {
 }
 
 export class Slime extends Monster {
-    constructor(scene, player, staticMeshes, dynamicMeshes, position) {
+    constructor(scene, player, staticMeshes, dynamicMeshes, position, modifier) {
         super(scene, player, staticMeshes, dynamicMeshes, position, {
             type: 'Slime',
-            tier: 1,
             health: 50,
             maxHealth: 50,
             attackDamage: 5,
@@ -336,7 +320,8 @@ export class Slime extends Monster {
             modelPath: './Model/Slime.glb',
             scale: { x: 0.8, y: 0.8, z: 0.8 },
             attackCoolDown: 2000
-        });
+        }, modifier);
+        this.moveSpeed *= modifier;
         this.scoreValue = 10;
     }
 
@@ -371,7 +356,7 @@ export class Slime extends Monster {
         const playerBox = new THREE.Box3().setFromObject(this.player.model.userData.collider);
 
         if (slimeBox.intersectsBox(playerBox)) {
-            this.player.takeDamage(this.attackDamage + this.getDamageModifier());
+            this.player.takeDamage(this.attackDamage);
             this.lastAttack = currenttime;
             this.pushPlayerBack(1.0);
             console.log(`Slime hit player for ${this.attackDamage} damage`);
@@ -412,10 +397,9 @@ export class Slime extends Monster {
 }
 
 export class Pixie extends Monster {
-    constructor(scene, player, staticMeshes, dynamicMeshes, position) {
+    constructor(scene, player, staticMeshes, dynamicMeshes, position, modifier) {
         super(scene, player, staticMeshes, dynamicMeshes, position, {
             type: 'Pixie',
-            tier: 1,
             health: 50,
             maxHealth: 50,
             attackDamage: 5,
@@ -425,7 +409,8 @@ export class Pixie extends Monster {
             modelPath: './Model/Pixie.glb',
             scale: { x: 1.1, y: 1.1, z: 1.1 },
             attackCoolDown: 2
-        });
+        }, modifier);
+        this.attackRange *= modifier;
 
         this.isFlying = false;
         this.wingsspeed = 1.5;
@@ -523,6 +508,7 @@ export class Pixie extends Monster {
             bulletMaterial
         );
         bullet.castShadow = true;
+        bullet.userData.shooter = this.monster;
 
         const monsterPos = this.monster.position.clone();
         bullet.position.copy(monsterPos);
@@ -533,17 +519,16 @@ export class Pixie extends Monster {
             bulletdirection,
             direction
         );
-        const bulletSpeed = 2;
+        const bulletSpeed = 4;
 
         this.dynamicMeshes.push({ mesh: bullet, direction, speed: bulletSpeed });
     }
 }
 
 export class Doll extends Monster {
-    constructor(scene, player, staticMeshes, dynamicMeshes, position) {
+    constructor(scene, player, staticMeshes, dynamicMeshes, position, modifier) {
         super(scene, player, staticMeshes, dynamicMeshes, position, {
             type: 'Doll',
-            tier: 2,
             health: 100,
             maxHealth: 100,
             attackDamage: 15,
@@ -553,7 +538,9 @@ export class Doll extends Monster {
             detectionRange: 20,
             scale: { x: 1.0, y: 1.0, z: 1.0 },
             attackCoolDown: 2000
-        });
+        }, modifier);
+        this.attackCoolDown /= modifier;
+        this.detectionRange *= modifier;
 
         this.jumperTimer = 0;
         this.isJumping = false;
@@ -678,7 +665,7 @@ export class Doll extends Monster {
         this.isHidden = true;
         this.isJumping = false;
         this.jumperTimer = 0;
-        this.targetY = -2;
+        this.targetY = -2.5;
         if (this.action['Jump']) this.action['Jump'].stop();
         if (this.action['Walking']) this.action['Walking'].stop();
     }
@@ -718,20 +705,19 @@ export class Doll extends Monster {
         if (DollBox.intersectsBox(playerBox)) {
             this.action['Walking'].reset().stop();
             this.action['Jump'].reset().play();
-            this.player.takeDamage(this.attackDamage + this.getDamageModifier());
+            this.player.takeDamage(this.attackDamage);
             this.lastAttack = currenttime;
             this.pushPlayerBack(2.0);
         }
-        console.log(`Doll hit player for ${this.attackDamage + this.getDamageModifier()} damage`);
+        console.log(`Doll hit player for ${this.attackDamage} damage`);
     }
 }
 
 
 export class BossWitch extends Monster {
-    constructor(scene, player, staticMeshes, dynamicMeshes, position) {
+    constructor(scene, player, staticMeshes, dynamicMeshes, position, modifier) {
         super(scene, player, staticMeshes, dynamicMeshes, position, {
             type: 'Witch',
-            tier: 3,
             health: 500,
             maxHealth: 500,
             attackDamage: 20,
@@ -739,9 +725,11 @@ export class BossWitch extends Monster {
             attackRange: 5,
             detectionRange: 20,
             modelPath: './Model/Witch.glb',
-            scale: { x: 2.5, y: 2.5, z: 2.5 },
+            scale: { x: 2, y: 2, z: 2 },
             attackCoolDown: 2,
-        });
+        }, modifier);
+        this.moveSpeed *= modifier;
+        this.detectionRange *=  modifier;
 
         this.waveAttackTimer = 0;
         this.waveAttackInterval = 7;

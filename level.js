@@ -18,8 +18,7 @@ export class Level extends THREE.Group {
         this.animations = [];
         this.action = {};
         this.player = player;
-        this.torchActions = new Map(); // Store torch animation actions
-        this.torchLights = new Map(); // Store torch light objects
+        this.torchLights = [];
         this.loadMap();
 
         window.addEventListener('spawnMonsterWave', (event) => {
@@ -31,7 +30,7 @@ export class Level extends THREE.Group {
                 positions.push(new THREE.Vector3(x, 1, z));
             }
             for (let i = 0; i < positions.length; i++) {
-                const monster = new Pixie(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, positions[i]);
+                const monster = new Pixie(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, positions[i], this.getModifier());
                 this.currentRoom.monsters.push(monster);
             }
         });
@@ -69,7 +68,7 @@ export class Level extends THREE.Group {
                             items: [],
                         });
                         console.log('Room added: ', child.name);
-                        console.log(`Room ${child.name} spawnPoint:`, spawnPoint);
+                        console.log(`${child.name} spawnPoint:`, spawnPoint);
                     }
                     if (child.name.includes('Door')) {
                         child.visible = false;
@@ -81,8 +80,8 @@ export class Level extends THREE.Group {
                     child.intensity /= 1000;
                     child.castShadow = false;
                     if (child.name.startsWith('TorchLight')) {
-                        this.torchLights.set(child, child.visible); // Store initial visibility
                         child.visible = false;
+                        this.torchLights.push(child);
                     }
                 }
             });
@@ -90,8 +89,7 @@ export class Level extends THREE.Group {
             this.currentRoom = this.rooms.get('Room1');
             window.rooms = this.rooms;
 
-            this.spawnMonsters(this.currentRoom);
-            this.spawnItems(this.currentRoom);
+            this.toggleTorchLight();
 
             let event = new Event('levelLoaded');
             window.dispatchEvent(event);
@@ -99,20 +97,10 @@ export class Level extends THREE.Group {
             this.mixer = new THREE.AnimationMixer(this.mapScene);
             this.animations = gltf.animations;
             this.animations.forEach((clip) => {
-                if (clip.name === 'FireLoop') {
-                    this.mapScene.traverse((child) => {
-                        if (child.name.startsWith('Torch')) {
-                            const action = this.mixer.clipAction(clip, child);
-                            this.action[clip.name] = action;
-                            this.torchActions.set(child, this.action[clip.name]);
-                            this.action['FireLoop'].reset().play();
-                        }
-                    });
-                } else {
-                    const act = this.mixer.clipAction(clip);
-                    this.action[clip.name] = act;
-                }
+                const act = this.mixer.clipAction(clip);
+                this.action[clip.name] = act;
             });
+            this.action['FireLoop'].reset().play();
         }, undefined, (error) => {
             console.error('Error loading Level.glb: ', error);
         });
@@ -125,9 +113,6 @@ export class Level extends THREE.Group {
             case 'Room2':
                 monsters = [
                     {type: 'Slime', position: new THREE.Vector3(0, 0.1, -28)},    
-                    {type: 'Slime', position: new THREE.Vector3(-5, 0.1, -30)},   
-                    {type: 'Pixie', position: new THREE.Vector3(0, 1, -32)},   
-                    {type: 'Pixie', position: new THREE.Vector3(0, 1, -34)},    
                     {type: 'Pixie', position: new THREE.Vector3(-7, 1, -34)}
                 ];
                 break;
@@ -135,9 +120,6 @@ export class Level extends THREE.Group {
                 monsters = [
                     {type: 'Slime', position:new THREE.Vector3(-28, 0.1, -30)},    
                     {type: 'Pixie', position:new THREE.Vector3(-26, 1, -32)},   
-                    {type: 'Pixie', position:new THREE.Vector3(-24, 1, -34)},   
-                    {type: 'Slime', position:new THREE.Vector3(-22, 0.1, -25)},    
-                    {type: 'Slime', position:new THREE.Vector3(-20, 0.1, -28)},
                     {type: 'Doll', position:new THREE.Vector3(-20, 0, -25)}, 
                     {type: 'Doll', position:new THREE.Vector3(-20, 0, -24)},   
                 ];
@@ -146,15 +128,11 @@ export class Level extends THREE.Group {
                 monsters = [
                     {type: 'Pixie', position:new THREE.Vector3(20, 1, -35)},
                     {type: 'Pixie', position:new THREE.Vector3(20, 1, -25)},      
-                    {type: 'Pixie', position:new THREE.Vector3(29, 1, -35)},
-                    {type: 'Pixie', position:new THREE.Vector3(29, 1, -25)},
-                    {type: 'Slime', position:new THREE.Vector3(24, 0.1, -30)},
                 ];
                 break;
             case 'Room5':
                 monsters = [
                     {type: 'Witch', position:new THREE.Vector3(24, 0, -62)},
-                    {type: 'Doll', position:new THREE.Vector3(14, 0, -72)},
                     {type: 'Doll', position:new THREE.Vector3(34, 0, -52)},
                 ];
             default:
@@ -165,16 +143,16 @@ export class Level extends THREE.Group {
             let monster;
             switch(monsterType.type){
                 case 'Slime':
-                    monster = new Slime(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position);
+                    monster = new Slime(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position, this.getModifier());
                     break;
                 case 'Pixie':
-                    monster = new Pixie(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position);
+                    monster = new Pixie(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position, this.getModifier());
                     break;
                 case 'Doll':
-                    monster = new Doll(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position);
+                    monster = new Doll(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position, this.getModifier());
                     break;
                 case 'Witch':
-                    monster = new BossWitch(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position);
+                    monster = new BossWitch(this.scene, this.player, this.staticMeshes, this.dynamicMeshes, monsterType.position, this.getModifier());
                     break;
                 default:
                     break;
@@ -185,7 +163,7 @@ export class Level extends THREE.Group {
         }
     }
     spawnSpikes(room){
-        const spikeSize = new THREE.Vector3(0.5, 0.5, 0.5);
+        const spikeSize = new THREE.Vector3(1, 1, 1);
         const count = Math.floor(Math.random()*8+3);
         for(let i = 0; i < count; i++){
             let validPos = null;
@@ -224,7 +202,7 @@ export class Level extends THREE.Group {
     }
 
     spawnCrates(room){
-        const crateSize = new THREE.Vector3(0.5, 0.5, 0.5);
+        const crateSize = new THREE.Vector3(1, 1, 1);
         const count = Math.floor(Math.random()*3+3);
         for(let i = 0; i < count; i++){
             let validPos = null;
@@ -299,7 +277,7 @@ export class Level extends THREE.Group {
             let item;
             switch (itemDef.type) {
                 case 'SpeedBoost':
-                    item = new SpeedBoostItem(this.scene, this.player, itemDef.position, 6, 2, '/Model/speed_pickup.glb', new THREE.Vector3(0.5, 0.5, 0.5));
+                    item = new SpeedBoostItem(this.scene, this.player, itemDef.position, '/Model/speed_pickup.glb');
                     break;
                 case 'Heal':
                     item = new HealItem(this.scene, this.player, itemDef.position, '/Model/healing_potion.glb', new THREE.Vector3(0.5, 0.5, 0.5))
@@ -330,28 +308,6 @@ export class Level extends THREE.Group {
     }
     isClear(room) {
         if (!room || !room.object) return;
-        if (room.items && Array.isArray(room.items)) {
-            room.items.forEach(item => {
-                if (item.geometry) {
-                    item.geometry.dispose();
-                }
-                if (item.material) {
-                    if (Array.isArray(item.material)) {
-                        item.material.forEach(mat => this.disposeMaterial(mat));
-                    } else {
-                        this.disposeMaterial(item.material);
-                    }
-                }
-                if (item.parent && item !== room.object) {
-                    item.parent.remove(item);
-                }
-                if (item.dispose && typeof item.dispose === 'function') {
-                    item.dispose();
-                }
-            });
-            room.items = [];
-        }
-        
 
         room.object.traverse((child) => {
             if (child.isMesh && child.name.includes('Door')) {
@@ -375,7 +331,7 @@ export class Level extends THREE.Group {
         for (let [name, room] of this.rooms.entries()) {
             if (room.spawnPoint.containsPoint(playerPos)) {
                 if (this.currentRoom !== room) {
-                    if (this.currentRoom) {
+                    if (this.currentRoom && this.currentRoom.states.isCleared) {
                         this.disposeRoom(this.currentRoom);
                         this.currentRoom.states.isDisposed = true;
                     }
@@ -389,14 +345,13 @@ export class Level extends THREE.Group {
                         this.spawnCrates(this.currentRoom);
                         this.spawnItems(this.currentRoom);
                     }
-                    // Update torch animations and lights
-                    this.updateTorchAnimations();
+                    this.toggleTorchLight();
                 }
                 window.currentRoom = this.currentRoom;
                 break;
             }
         }
-        if (this.currentRoom && this.currentRoom.object && !this.currentRoom.states.isDisposed) {
+        if (this.currentRoom && this.currentRoom.object) {
             if (this.currentRoom.spawnPoint.containsPoint(playerPos) && !this.currentRoom.states.isVisited) {
                 console.log('Player spawned in: ', this.currentRoom.object.name);
                 this.currentRoom.states.isVisited = true;
@@ -411,17 +366,17 @@ export class Level extends THREE.Group {
                 this.currentRoom.spikes.forEach(spike => {
                     spike.update(delta);
                 })
-                this.currentRoom.items.forEach(item => {
-                    if (item.isActive) {
-                        item.update(delta, this.currentRoom.items);
-                    }
-                });
                 if (this.currentRoom.monsters.every(monster => !monster.isAlive)) {
                     console.log('All monsters cleared in: ', this.currentRoom.object.name);
                     this.currentRoom.states.isCleared = true;
                 }
             }
-            if (this.currentRoom.states.isCleared) {
+            this.currentRoom.items.forEach(item => {
+                if (item.isActive) {
+                    item.update(delta, this.currentRoom.items);
+                }
+            });
+            if (this.currentRoom.states.isCleared  && !this.currentRoom.states.isDisposed) {
                 this.isClear(this.currentRoom);
             }
             if (this.currentRoom.object.name === 'Room5' && this.currentRoom.states.isCleared && !this.levelCompleted) {
@@ -431,33 +386,8 @@ export class Level extends THREE.Group {
         }
     }
 
-    updateTorchAnimations() {
-        // Update torch animations
-        this.torchActions.forEach((action, torch) => {
-            let isInCurrentRoom = false;
-            if (this.currentRoom) {
-                let parent = torch;
-                while (parent) {
-                    if (parent === this.currentRoom.object) {
-                        isInCurrentRoom = true;
-                        break;
-                    }
-                    parent = parent.parent;
-                }
-            }
-            if (isInCurrentRoom) {
-                if (!action.isRunning()) {
-                    action.reset().play();
-                }
-            } else {
-                if (action.isRunning()) {
-                    action.stop();
-                }
-            }
-        });
-
-        // Update torch lights
-        this.torchLights.forEach((initialVisible, light) => {
+    toggleTorchLight() {
+        this.torchLights.forEach((light) => {
             let isInCurrentRoom = false;
             if (this.currentRoom) {
                 let parent = light;
@@ -469,7 +399,7 @@ export class Level extends THREE.Group {
                     parent = parent.parent;
                 }
             }
-            light.visible = isInCurrentRoom; // Enable light only in current room
+            light.visible = isInCurrentRoom;
         });
     }
 
@@ -482,36 +412,10 @@ export class Level extends THREE.Group {
         let event2 = new Event('roomDisposed');
         window.dispatchEvent(event2);
 
-        /*if (room.items && Array.isArray(room.items)) {
-            room.items.forEach(item => {
-                if (item.geometry) {
-                    item.geometry.dispose();
-                }
-                if (item.material) {
-                    if (Array.isArray(item.material)) {
-                        item.material.forEach(mat => this.disposeMaterial(mat));
-                    } else {
-                        this.disposeMaterial(item.material);
-                    }
-                }
-                if (item.parent && item !== room.object) {
-                    item.parent.remove(item);
-                }
-                if (item.dispose && typeof item.dispose === 'function') {
-                    item.dispose();
-                }
-            });
-            room.items = [];
-        }*/
-
         const objectsToRemove = [];
         room.object.traverse((child) => {
-            if (child === room.object || child.name.startsWith('Room') || child.name.startsWith('Wall') || !child.name.startsWith('Torch')) {
+            if (child === room.object || child.name.startsWith('Room') || child.name.startsWith('Wall') || child.name.startsWith('Torch')) {
                 return;
-            }
-            if (child.isLight && child.name.startsWith('TorchLight')) {
-                child.visible = false; // Ensure light is disabled
-                this.torchLights.delete(child); // Remove from tracking
             }
   
             if (child.geometry) {
@@ -551,5 +455,22 @@ export class Level extends THREE.Group {
         if (mat.envMap) mat.envMap.dispose();
 
         mat.dispose();
+    }
+
+    getModifier()
+    {
+        const difficulty = localStorage.getItem('difficulty') || 'easy';
+        let modifier = 1;
+        switch (difficulty) {
+            case 'medium':
+                modifier = 1.2;
+                break;
+            case 'hard':
+                modifier = 1.5;
+                break;
+            default:
+                modifier = 1;
+        }
+        return modifier;
     }
 }
