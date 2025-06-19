@@ -26,7 +26,8 @@ export class Player {
         this.stats = {
             MaxHealth: 200,
             Health: 200,
-            DMG: 20,
+            DMG: 10,
+            AtkSpeed: 1.0,
             Speed: 4
         };
         this.pushVelocity = new THREE.Vector3(0, 0, 0);
@@ -113,7 +114,7 @@ export class Player {
                 mesh.material.color.copy(originalcolor);
             });
             this.isFlashing = false;
-        }, 1000);
+        }, 500);
     }
     die() {
         console.log('isAlive:', this.isAlive);
@@ -234,6 +235,12 @@ export class Player {
 
         // Camera follow
         const targetPos = this.model.position.clone();
+        let offset = new THREE.Vector3();
+        const distance = this.target.position.distanceTo(targetPos);
+        offset.copy(this.target.position).sub(targetPos).normalize();
+        offset.multiplyScalar(distance * 0.1);
+        targetPos.add(offset);
+
         this.camera.position.set(targetPos.x, targetPos.y + 12, targetPos.z + 5);
         this.camera.lookAt(targetPos);
 
@@ -285,10 +292,12 @@ export class Player1 extends Player {
         const updateStatsPanel = () => {
             const healthDisplay = document.getElementById('health');
             const dmgDisplay = document.getElementById('dmg');
+            const atkspeedDisplay = document.getElementById('atkspeed');
             const speedDisplay = document.getElementById('speed');
 
             if (healthDisplay) healthDisplay.textContent = this.stats.Health;
             if (dmgDisplay) dmgDisplay.textContent = this.stats.DMG;
+            if (atkspeedDisplay) atkspeedDisplay.textContent = this.stats.AtkSpeed.toFixed(1);
             if (speedDisplay) speedDisplay.textContent = this.stats.Speed;
         };
 
@@ -321,6 +330,16 @@ export class Player1 extends Player {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
+                }
+                if (child.material){
+                    if(child.material.map){
+                        child.material.emissiveMap = child.material.map;
+                        child.material.emissiveIntensity = 0.15;
+                    }
+                    if(child.material.emissive){
+                        child.material.emissive = child.material.color.clone();
+                        child.material.emissiveIntensity = 0.15;
+                    }
                 }
             });
 
@@ -439,7 +458,7 @@ export class Player1 extends Player {
             this.mixer.removeEventListener('finished', this.OnGunUp);
             if (!this.shootInterval) {
                 this.Shoot();
-                this.shootInterval = setInterval(() => { this.Shoot(); }, 333);
+                this.shootInterval = setInterval(() => { this.Shoot(); }, 333 / this.stats.AtkSpeed);
             }
         }
     }
@@ -512,7 +531,7 @@ export class Player1 extends Player {
                 });
 
                 for (let i = 0; i < this.staticMeshes.length; i++) {
-                    if(this.staticMeshes[i].name.includes('Wall') || this.staticMeshes[i].name.includes('Door')){
+                    if(this.staticMeshes[i].name.startsWith('Wall') || this.staticMeshes[i].name.includes('Door')){
                     const mesh = this.staticMeshes[i];
                     if (obj.boundingSphere.intersectsBox(mesh.boundingBox)) {
                         hitSomething = true;
