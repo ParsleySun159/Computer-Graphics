@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { BossWitch, Doll, Monster, Pixie, Slime } from './monster.js';
+import { BossWitch, Doll, Pixie, Slime } from './monster.js';
 import { Crate, Spike } from './props.js';
-
 import { SpeedBoostItem, HealItem} from './item.js';
+
 export class Level extends THREE.Group {
     constructor(scene, player, staticMeshes, dynamicMeshes) {
         super();
@@ -54,9 +54,12 @@ export class Level extends THREE.Group {
                             console.warn('No spawn point found for: ', child.name);
                         }
 
+                        const roomID = parseInt(child.name.match(/\d+$/)[0]);
+
                         this.rooms.set(child.name, {
                             object: child,
                             spawnPoint: spawnPoint,
+                            roomID: roomID,
                             states: {
                                 isVisited: false,
                                 isCleared: false,
@@ -164,7 +167,7 @@ export class Level extends THREE.Group {
     }
     spawnSpikes(room){
         const spikeSize = new THREE.Vector3(1, 1, 1);
-        const count = Math.floor(Math.random()*8+3);
+        const count = Math.floor(Math.random()*(room.roomID % 3 + 1) + 5);
         for(let i = 0; i < count; i++){
             let validPos = null;
             let attempts = 0;
@@ -179,9 +182,8 @@ export class Level extends THREE.Group {
                 const tempBox = new THREE.Box3().setFromCenterAndSize(position, spikeSize);
 
                 const isCollided = this.staticMeshes.some((mesh) => {
-                    if(!mesh.name.startsWith('Room') && mesh.boundingBox){
-                        const worldBox = mesh.boundingBox.clone().applyMatrix4(mesh.matrixWorld);
-                        return tempBox.intersectsBox(worldBox);
+                    if(mesh.name.startsWith('Wall') && mesh.boundingBox){
+                        return tempBox.intersectsBox(mesh.boundingBox);
                     }
                     return false;
                 });
@@ -203,7 +205,7 @@ export class Level extends THREE.Group {
 
     spawnCrates(room){
         const crateSize = new THREE.Vector3(1, 1, 1);
-        const count = Math.floor(Math.random()*3+3);
+        const count = Math.floor(Math.random()*(room.roomID % 3 + 2) + 5);
         for(let i = 0; i < count; i++){
             let validPos = null;
             let attempts = 0;
@@ -218,9 +220,8 @@ export class Level extends THREE.Group {
                 const tempBox = new THREE.Box3().setFromCenterAndSize(position, crateSize);
 
                 const isCollided = this.staticMeshes.some((mesh) => {
-                    if(!mesh.name.startsWith('Room') && mesh.boundingBox){
-                        const worldBox = mesh.boundingBox.clone().applyMatrix4(mesh.matrixWorld);
-                        return tempBox.intersectsBox(worldBox);
+                    if(mesh.name.startsWith('Wall') && mesh.boundingBox){
+                        return tempBox.intersectsBox(mesh.boundingBox);
                     }
                     return false;
                 });
@@ -233,7 +234,7 @@ export class Level extends THREE.Group {
             }
 
             if(validPos){
-                const crate = new Crate(this.scene, this.player, this.staticMeshes, validPos);
+                const crate = new Crate(this.scene, this.player, this.staticMeshes, validPos, room.items);
                 room.crates.push(crate);
                 console.log(`Spawned crate at ${validPos.x}, ${validPos.y}, ${validPos.z} in ${room.object.name}`);
             }
@@ -280,7 +281,7 @@ export class Level extends THREE.Group {
                     item = new SpeedBoostItem(this.scene, this.player, itemDef.position, '/Model/speed_pickup.glb');
                     break;
                 case 'Heal':
-                    item = new HealItem(this.scene, this.player, itemDef.position, '/Model/healing_potion.glb', new THREE.Vector3(0.5, 0.5, 0.5))
+                    item = new HealItem(this.scene, this.player, itemDef.position, '/Model/healing_potion.glb')
                     break;
                 default:
                     break;
@@ -288,7 +289,6 @@ export class Level extends THREE.Group {
             if (item) {
                 room.items = room.items || [];
                 room.items.push(item);
-                //console.log("success")
             }
         }
     }
@@ -328,7 +328,7 @@ export class Level extends THREE.Group {
 
         const playerPos = this.player.model.getWorldPosition(new THREE.Vector3());
 
-        for (let [name, room] of this.rooms.entries()) {
+        for (let room of this.rooms.values()) {
             if (room.spawnPoint.containsPoint(playerPos)) {
                 if (this.currentRoom !== room) {
                     if (this.currentRoom && this.currentRoom.states.isCleared) {

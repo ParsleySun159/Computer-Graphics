@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { SpeedBoostItem, HealItem, DamageIncreaseItem, AtkSpeedIncreaseItem} from './item.js';
 
 export class Props {
     constructor(scene, player, staticMeshes, position){
@@ -96,8 +97,9 @@ export class Spike extends Props {
 }
 
 export class Crate extends Props {
-    constructor(scene, player, staticMeshes, position){
+    constructor(scene, player, staticMeshes, position, items = []){
         super(scene, player, staticMeshes, position);
+        this.items = items;
         this.durability = 3;
     }
     loadModel(){
@@ -123,19 +125,35 @@ export class Crate extends Props {
             this.scene.add(this.model);
         });
     }
+    spawnItem(){
+        if(Math.random() > 0.5) return;
+        const id = Math.floor(Math.random()*4+1);
+        let item;
+        switch (id) {
+            case 1:
+                item = new HealItem(this.scene, this.player, this.position, '/Model/healing_potion.glb');
+                break;
+            case 2:
+                item = new DamageIncreaseItem(this.scene, this.player, this.position, '/Model/damage_pickup.glb');
+                break;
+            case 3:
+                item = new AtkSpeedIncreaseItem(this.scene, this.player, this.position, '/Model/atkspeed_pickup.glb');
+                break;
+            case 4:
+                item = new SpeedBoostItem(this.scene, this.player, this.position, '/Model/speed_pickup.glb');
+                break;
+            default:
+                break;
+        }
+        if(item) {
+            this.items.push(item);
+        }
+    }
     createhitbox() {
         this.model.traverse((child) => {
             if(child.isMesh && child.name.startsWith('Crate')){
                 this.staticMeshes.push(child);
-                child.geometry.computeBoundingBox();
-
-                const bbox = child.geometry.boundingBox;
-                const centerY = (bbox.min.y + bbox.max.y) / 2;
-                const halfY = (bbox.max.y - bbox.min.y) / 2 * 1.5;
-                bbox.min.y = centerY - halfY;
-                bbox.max.y = centerY + halfY;
-
-                child.boundingBox = child.geometry.boundingBox.clone();
+                child.boundingBox = new THREE.Box3().setFromObject(child, true);
                 this.model.userData.collider = child.boundingBox;
             }
         });
@@ -143,9 +161,9 @@ export class Crate extends Props {
     }
     takeDamage() {
         this.durability -= 1;
-        console.log(this.durability);
         if(this.durability <= 0){
             this.dispose();
+            this.spawnItem();
         }
     }
     dispose(){
