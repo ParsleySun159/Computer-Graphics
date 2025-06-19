@@ -1,8 +1,6 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Level } from './level.js';
 import { Player1 } from './player.js';
-import { Monster } from './monster.js';
 
 const scene = new THREE.Scene();
 
@@ -10,7 +8,7 @@ const camera = new THREE.PerspectiveCamera(
     50,
     window.innerWidth / window.innerHeight,
     0.1,
-    20
+    30
 );
 camera.lookAt(0, 0, 0);
 
@@ -31,15 +29,13 @@ light.shadow.camera.far = 500;
 light.shadow.mapSize.width = 2048; 
 light.shadow.mapSize.height = 2048;
 
-const hemisphereLight = new THREE.HemisphereLight(0xFFB100, 0x111184, 0.5);
+const intensity = parseFloat(localStorage.getItem('intensity')) || 0.5;
+const hemisphereLight = new THREE.HemisphereLight(0xFFB100, 0x111184, intensity);
 scene.add(hemisphereLight);
 
-scene.fog = new THREE.FogExp2(0xFFFFFF, 0.02);
+scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
-const pointLight = new THREE.PointLight(0xFFFFFF, 1, 0, 2); //Player's glow
-scene.add(pointLight);
-
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({powerPreference: 'high-performance'});
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000);
 renderer.physicallyCorrectLights = true;
@@ -56,16 +52,18 @@ let player = new Player1(scene, camera, staticMeshes, dynamicMeshes);
 let level = new Level(scene, player, staticMeshes, dynamicMeshes);
 scene.add(level);
 
-
-
 function updateStaticMeshes(object, type) { //1: add, 0:dispose
     object.traverse((child) => {
-        if (type == 1 && !staticMeshes.includes(child) && child.isMesh && !child.name.endsWith('_Ground') && !child.name.endsWith('Point') && !child.name.startsWith('Torch')) {
+        if (!child.isMesh) return;
+
+        const isRoom = /^Room\d+$/.test(child.name);
+        const isExcluded = child.name.endsWith('Point') || child.name.startsWith('Torch');
+
+        if (type == 1 && !staticMeshes.includes(child) && !isRoom && !isExcluded) {
             staticMeshes.push(child);
-            child.geometry.computeBoundingBox();
-            child.boundingBox = child.geometry.boundingBox.clone();
+            child.boundingBox = new THREE.Box3().setFromObject(child, true);
         }
-        if (type == 0 && staticMeshes.includes(child) && child.isMesh && !child.name.startsWith('Room') && !child.name.startsWith('Wall')) {
+        if (type == 0 && staticMeshes.includes(child) && !child.name.startsWith('Room') && !child.name.startsWith('Wall')) {
             const index = staticMeshes.indexOf(child);
             if (index !== - 1) {
                 staticMeshes.splice(index, 1);
@@ -127,6 +125,18 @@ window.addEventListener('playerHeal', (e) => {
     const healthDisplay = document.getElementById('health');
     if (healthDisplay) {
         healthDisplay.textContent = e.detail.health;
+    }
+});
+window.addEventListener('damageIncrease', (e) => {
+    const dmgDisplay = document.getElementById('dmg');
+    if (dmgDisplay) {
+        dmgDisplay.textContent = e.detail.damage;
+    }
+});
+window.addEventListener('atkspeedIncrease', (e) => {
+    const atkspeedDisplay = document.getElementById('atkspeed');
+    if (atkspeedDisplay) {
+        atkspeedDisplay.textContent = e.detail.atkspeed;
     }
 });
 
@@ -201,7 +211,6 @@ const minimapRenderer = new THREE.WebGLRenderer({
     alpha: true,
 });
 minimapRenderer.setSize(200, 200);
-minimapRenderer.setClearColor(0x000000, 1);
 
 const minimapCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 0.1, 1000);
 minimapCamera.up.set(0, 0, -1);
@@ -248,7 +257,12 @@ function animate() {
     if (isPaused) return;
 
     staticMeshes.forEach(mesh => {
-        mesh.boundingBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+        if(mesh.name.startsWith('Wall')) return;
+        mesh.boundingBox.setFromObject(mesh, true);
+        if(mesh.name.includes('Crate')){
+            mesh.boundingBox.min.y *= 2;
+            mesh.boundingBox.max.y *= 2;
+        }
     });
 
     player.update(delta);
@@ -257,8 +271,6 @@ function animate() {
         light.target.position.set(player?.model?.position.x, player?.model?.position.y, player?.model?.position.z);
     }
     level.update(delta);
-
-    pointLight.position.set(player?.model?.position.x, player?.model?.position.y + 0.5, player?.model?.position.z);
 
     if (player?.model) {
         const pos = player.model.position;
@@ -270,6 +282,7 @@ function animate() {
     renderer.render(scene, camera);
     renderMinimap();
 }
+
 animate();
 
 window.addEventListener('resize', () => {
@@ -303,3 +316,5 @@ if (musicEnabled) {
         }, { once: true });
     });
 }
+
+
