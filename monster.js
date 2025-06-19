@@ -12,6 +12,7 @@ export class Monster {
         this.loader = new GLTFLoader();
         this.monster = null;
         this.mixer = null;
+        this.delta = null;
         this.animations = [];
         this.action = {};
 
@@ -58,6 +59,14 @@ export class Monster {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
+                    if (child.material.map) {
+                        const map = child.material.map;
+                        map.minFilter = THREE.LinearFilter;
+                        map.magFilter = THREE.LinearFilter;
+                        map.wrapS = THREE.RepeatWrapping;
+                        map.wrapT = THREE.RepeatWrapping;
+                        map.needsUpdate = true;
+                    }
                 }
             });
             this.scene.add(this.monster);
@@ -73,7 +82,7 @@ export class Monster {
     createhitbox() { }
     pushPlayerBack(pushForce) {
         const playerPosition = this.player.model.position.clone();
-        const monsterPosition = this.monster.position.clone();
+        const monsterPosition = this.monster?.position.clone();
 
         const pushDir = new THREE.Vector3(
             playerPosition.x - monsterPosition.x,
@@ -121,6 +130,7 @@ export class Monster {
     update(delta, monsters) {
         if (!this.player.isAlive || !this.player || !this.monster || !this.mixer || !this.player.model) return;
         this.mixer.update(delta);
+        this.delta = delta;
 
         this.avoidMonster(monsters);
 
@@ -138,7 +148,7 @@ export class Monster {
             const move = item.direction.clone().multiplyScalar(item.speed * delta);
             item.mesh.position.add(move);
             if (item.mesh.position.distanceTo(this.player?.model?.position) < 1) {
-                if (this.player.isAlive) {
+                if (this.player.isAlive && !this.player.isFlashing) {
                     this.player.takeDamage(this.attackDamage);
                 }
                 this.scene.remove(item.mesh);
@@ -356,10 +366,12 @@ export class Slime extends Monster {
         const playerBox = new THREE.Box3().setFromObject(this.player.model.userData.collider);
 
         if (slimeBox.intersectsBox(playerBox)) {
-            this.player.takeDamage(this.attackDamage);
             this.lastAttack = currenttime;
-            this.pushPlayerBack(1.0);
-            console.log(`Slime hit player for ${this.attackDamage} damage`);
+            if(!this.player.isFlashing){
+                this.player.takeDamage(this.attackDamage);
+                this.pushPlayerBack(1.0);
+                console.log(`Slime hit player for ${this.attackDamage} damage`);
+            }
         }
     }
 
@@ -446,9 +458,6 @@ export class Pixie extends Monster {
                 }
             }
             else {
-                if (this.action['Walking'] && this.action['Walking'].isRunning()) {
-                    this.action['Walking'].stop();
-                }
                 if (this.player.isAlive && this.attackTimer <= 0) {
                     this.attackPlayer();
                     this.attackTimer = this.attackCoolDown;
@@ -476,7 +485,8 @@ export class Pixie extends Monster {
             this.action[clip.name] = act;
             act.setLoop(THREE.LoopRepeat);
         });
-
+        this.action['Shoot'].setLoop(THREE.LoopOnce);
+        this.action['Shoot'].clampWhenFinished = true;
         if (this.action['Walking']) {
             this.action['Shoot'].reset().stop();
             this.action['Walking'].play();
@@ -487,8 +497,14 @@ export class Pixie extends Monster {
     performAttack() {
         if (this.action['Shoot']) {
             this.action['Walking'].reset().stop();
-            this.action['Shoot'].reset().play();
+            this.action['Shoot'].reset().fadeIn(0.2).play();
             this.shootBullet();
+            this.mixer.addEventListener('finished', (event) => {
+                if(event.action === this.action['Shoot']){
+                    this.mixer.removeEventListener('finished', event);
+                    this.action['Walking']?.fadeIn(0.2).play();
+                }
+            })
         }
     }
 
@@ -705,9 +721,11 @@ export class Doll extends Monster {
         if (DollBox.intersectsBox(playerBox)) {
             this.action['Walking'].reset().stop();
             this.action['Jump'].reset().play();
-            this.player.takeDamage(this.attackDamage);
+            if(!this.player.isFlashing){
+                this.player.takeDamage(this.attackDamage);
+                this.pushPlayerBack(2.0);
+            }
             this.lastAttack = currenttime;
-            this.pushPlayerBack(2.0);
         }
         console.log(`Doll hit player for ${this.attackDamage} damage`);
     }
@@ -733,8 +751,8 @@ export class BossWitch extends Monster {
 
         this.waveAttackTimer = 0;
         this.waveAttackInterval = 7;
-        this.waveAttackRange = 7;
-        this.waveAttackDamage = 30;
+        this.waveAttackRange = 10;
+        this.waveAttackDamage = this.attackDamage + 10;
         this.isWave = false;
         this.scoreValue = 35;
     }
@@ -750,7 +768,6 @@ export class BossWitch extends Monster {
         if (this.action['Attack']) {
             this.action['Attack'].reset().play();
             this.action['Attack'].setLoop(THREE.LoopOnce);
-            this.action['Attack'].clampWhenFinished = true;
         }
 
         setTimeout(() => {
@@ -770,16 +787,17 @@ export class BossWitch extends Monster {
 
             let scale = 0.1;
             const maxScale = this.waveAttackRange;
-            const waveSpeed = 0.2;
+            const waveSpeed = 5;
 
             const animateWave = () => {
-                scale += waveSpeed * 0.5;
+                scale += waveSpeed * this.delta;
                 wave.scale.set(scale, scale, scale);
 
                 if (this.player.isAlive) {
                     const distance = this.player.model.position.distanceTo(wave.position);
-                    if (distance <= scale && distance >= scale - waveSpeed) {
+                    if (distance <= scale && distance >= scale - waveSpeed && !this.player.isFlashing) {
                         this.player.takeDamage(this.waveAttackDamage);
+                        this.pushPlayerBack(1.5);
                     }
                 }
 
@@ -814,9 +832,10 @@ export class BossWitch extends Monster {
         const monsterPosition = this.monster.position;
 
         const distanceToPlayer = monsterPosition.distanceTo(playerPosition);
+        const isAttacking = this.action['Shoot'].isRunning() || this.action['Attack'].isRunning();
 
         // if player is within detection range
-        if (distanceToPlayer <= this.detectionRange && this.canSeePlayer()) {
+        if (distanceToPlayer <= this.detectionRange && this.canSeePlayer() && !isAttacking) {
             if (distanceToPlayer > this.attackRange) {
                 this.MovetoPlayer(delta, playerPosition);
                 if (this.action['Shoot'] && this.action['Shoot'].isRunning()) {
@@ -866,18 +885,20 @@ export class BossWitch extends Monster {
             this.action[clip.name] = act;
             act.setLoop(THREE.LoopRepeat);
         });
+        this.action['Shoot'].setLoop(THREE.LoopOnce);
+        this.action['Shoot'].clampWhenFinished = true;
     }
 
     performAttack() {
         if (this.waveAttackTimer >= this.waveAttackInterval) {
             this.action['Shoot'].stop();
-            this.action['Attack'].reset().play();
+            this.action['Attack'].reset().fadeIn(0.2).play();
             this.WaveAttack();
             this.waveAttackTimer = 0;
         }
-        if (this.action['Shoot']) {
-            this.action['Shoot'].reset().play();
-            this.action['Shoot'].fadeOut(0.2);
+        else if (this.action['Shoot']) {
+            this.action['Attack'].stop();
+            this.action['Shoot'].reset().fadeIn(0.2).play();
             this.shootBullet();
         }
     }
