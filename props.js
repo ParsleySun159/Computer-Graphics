@@ -14,6 +14,35 @@ export class Props {
         this.loadModel();
     }
     loadModel(){}
+    dispose(){
+        this.model.traverse((child) => {
+            if (child.isMesh) {
+                if(child.name.startsWith('Crate')){
+                    const index = this.staticMeshes.indexOf(child);
+                    if (index !== -1) {
+                        this.staticMeshes.splice(index, 1);
+                    }
+                }
+                if (child.boundingBox) {
+                    delete child.boundingBox;
+                }
+                if (child.geometry) {
+                    child.geometry.dispose();
+                }
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => mat.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            }
+        });
+
+        this.model.userData.collider = null;
+        this.scene.remove(this.model);
+        this.model = null;
+    }
 }
 export class Spike extends Props {
     constructor(scene, player, staticMeshes, position){
@@ -165,36 +194,5 @@ export class Crate extends Props {
             this.dispose();
             this.spawnItem();
         }
-    }
-    dispose(){
-        this.model.traverse((child) => {
-            if (child.isMesh) {
-                if(child.name.startsWith('Crate')){
-                    const index = this.staticMeshes.indexOf(child);
-                    if (index !== -1) {
-                        this.staticMeshes.splice(index, 1);
-                    }
-                    if (child.boundingBox) {
-                        delete child.boundingBox;
-                    }
-                    if (this.model) {
-                        this.scene.remove(this.model);
-                    }
-                }
-                if (child.geometry) {
-                    child.geometry.dispose();
-                }
-                if (child.material) {
-                    if (Array.isArray(child.material)) {
-                        child.material.forEach(mat => mat.dispose());
-                    } else {
-                        child.material.dispose();
-                    }
-                }
-            }
-        });
-
-        this.model.userData.collider = null;
-        this.model = null;
     }
 }

@@ -412,6 +412,10 @@ export class Level extends THREE.Group {
         let event2 = new Event('roomDisposed');
         window.dispatchEvent(event2);
 
+        room.spikes.forEach(spike => {
+            spike.dispose();
+        });
+
         const objectsToRemove = [];
         room.object.traverse((child) => {
             if (child === room.object || child.name.startsWith('Room') || child.name.startsWith('Wall') || child.name.startsWith('Torch')) {
