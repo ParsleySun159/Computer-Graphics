@@ -28,7 +28,6 @@ YÊU CẦU HỆ THỐNG
 - **Trình duyệt Web**: Chrome, Firefox, hoặc Edge (có hỗ trợ WebGL)
 - Người dùng có thể kiểm tra máy có hỗ trợ WebGL không bằng cách truy cập: https://get.webgl.org
 ------------------------------------------------------------
-------------------------------------------------------------
 HƯỚNG DẪN CÀI ĐẶT & CHẠY DỰ ÁN
 ------------------------------------------------------------
 Bước 1: Clone project từ GitHub bằng cách chạy các lệnh sau:
