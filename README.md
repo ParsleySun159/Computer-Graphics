@@ -28,6 +28,11 @@ YÊU CẦU HỆ THỐNG
 - **Trình duyệt Web**: Chrome, Firefox, hoặc Edge (có hỗ trợ WebGL)
 - Người dùng có thể kiểm tra máy có hỗ trợ WebGL không bằng cách truy cập: https://get.webgl.org
 ------------------------------------------------------------
+DRIVE CỦA NHÓM (VIDEO DEMO)
+------------------------------------------------------------
+- Drive của nhóm chứa video demo, file báo cáo, source code.
+https://drive.google.com/drive/folders/1LzFMXfEvIH8zkA4GHivzwZYFQUflLcSO?usp=sharing
+------------------------------------------------------------
 HƯỚNG DẪN CÀI ĐẶT & CHẠY DỰ ÁN
 ------------------------------------------------------------
 Bước 1: Clone project từ GitHub bằng cách chạy các lệnh sau:
