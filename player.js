@@ -15,6 +15,7 @@ export class Player {
         this.action = {};
         this.head = null;
         this.keysPressed = {};
+        this.lastPos = null;
         this.target = new THREE.Object3D();
         this.intersectionPoint = new THREE.Vector3();
         this.plane = new THREE.Plane();
@@ -187,6 +188,7 @@ export class Player {
                 const mesh = this.staticMeshes[i];
                 if (playerBox.intersectsBox(mesh.boundingBox)) {
                     collided = true;
+                    console.log(mesh.name);
                     break;
                 }
             }

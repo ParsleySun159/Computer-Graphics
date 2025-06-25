@@ -5,13 +5,15 @@ import { Crate, Spike } from './props.js';
 import { SpeedBoostItem, HealItem} from './item.js';
 
 export class Level extends THREE.Group {
-    constructor(scene, player, staticMeshes, dynamicMeshes) {
+    constructor(scene, camera = null, player, staticMeshes, dynamicMeshes) {
         super();
         this.loader = new GLTFLoader();
         this.scene = scene;
+        this.camera = camera;
         this.staticMeshes = staticMeshes;
         this.dynamicMeshes = dynamicMeshes;
         this.mapScene = null;
+        this.previousWalls = [];
         this.rooms = new Map();
         this.currentRoom = null;
         this.mixer = null;
@@ -41,7 +43,7 @@ export class Level extends THREE.Group {
             this.mapScene = gltf.scene;
             this.mapScene.traverse((child) => {
                 if (child.isMesh) {
-                    if (child.name.startsWith('Room') && !child.name.includes('Door') && !child.name.endsWith('Point')) {
+                    if (/^Room\d+$/.test(child.name)) {
                         let spawnPoint = null;
                         child.traverse((c) => {
                             if (c.name.endsWith('Point')) {
@@ -336,6 +338,8 @@ export class Level extends THREE.Group {
                         this.currentRoom.states.isDisposed = true;
                     }
                     this.currentRoom = room;
+                    this.player.lastPos = this.player.model.position.clone();
+                    console.log('Player position: ', this.player.lastPos);
                     console.log('Player entered room: ', this.currentRoom.object.name);
                     if (!this.currentRoom.states.isVisited) {
                         console.log('Room is visited for the first time: ', this.currentRoom.object.name);
@@ -370,12 +374,19 @@ export class Level extends THREE.Group {
                     console.log('All monsters cleared in: ', this.currentRoom.object.name);
                     this.currentRoom.states.isCleared = true;
                 }
+                if (!this.currentRoom.spawnPoint.containsPoint(playerPos)) { //safe check
+                    const spawnCenter = this.currentRoom.spawnPoint.getCenter(new THREE.Vector3());
+                    const safePos = this.player.lastPos.clone().lerp(spawnCenter, 0.2);
+                    safePos.y = 0;
+                    this.player.model.position.copy(safePos);
+                }
             }
             this.currentRoom.items.forEach(item => {
                 if (item.isActive) {
                     item.update(delta, this.currentRoom.items);
                 }
             });
+            this.updateWallOpacity();
             if (this.currentRoom.states.isCleared  && !this.currentRoom.states.isDisposed) {
                 this.isClear(this.currentRoom);
             }
@@ -401,6 +412,62 @@ export class Level extends THREE.Group {
             }
             light.visible = isInCurrentRoom;
         });
+    }
+
+    updateWallOpacity() {
+        if (!this.camera) return;
+
+        if (this.previousWalls && this.previousWalls.length > 0) {
+            this.previousWalls.forEach(wall => {
+                if (wall.originalMaterial) {
+                    wall.material = wall.originalMaterial;
+                    if (Array.isArray(wall.material)) {
+                        wall.material.forEach(mat => {
+                            if (mat.opacity !== 1) {
+                                mat.opacity = 1;
+                                mat.transparent = false;
+                            }
+                        });
+                    } else {
+                        if (wall.material.opacity !== 1) {
+                            wall.material.opacity = 1;
+                            wall.material.transparent = false;
+                        }
+                    }
+                    delete wall.originalMaterial;
+                }
+            });
+            this.previousWalls = [];
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const cameraPos = this.camera.getWorldPosition(new THREE.Vector3());
+        const playerPos = this.player.model.getWorldPosition(new THREE.Vector3());
+        const direction = new THREE.Vector3().subVectors(playerPos, cameraPos).normalize();
+
+        raycaster.set(cameraPos, direction);
+        const intersects = raycaster.intersectObjects(this.mapScene.children, true);
+
+        for (let intersect of intersects) {
+            const object = intersect.object;
+            if (object.isMesh && (object.name.startsWith('Wall') || object.name.includes('Door'))) {
+                this.previousWalls.push(object);
+
+                object.originalMaterial = Array.isArray(object.material) ? object.material.map(mat => mat) : object.material;
+
+                if (Array.isArray(object.material)) {
+                    object.material = object.material.map(mat => mat.clone());
+                    object.material.forEach(mat => {
+                        mat.opacity = 0.2;
+                        mat.transparent = true;
+                    });
+                } else {
+                    object.material = object.material.clone();
+                    object.material.opacity = 0.2;
+                    object.material.transparent = true;
+                }
+            }
+        }
     }
 
     disposeRoom(room) {

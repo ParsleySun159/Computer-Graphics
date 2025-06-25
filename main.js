@@ -49,7 +49,7 @@ let staticMeshes = [];
 let dynamicMeshes = [];
 window.staticMeshes = staticMeshes;
 let player = new Player1(scene, camera, staticMeshes, dynamicMeshes);
-let level = new Level(scene, player, staticMeshes, dynamicMeshes);
+let level = new Level(scene, camera, player, staticMeshes, dynamicMeshes);
 scene.add(level);
 
 function updateStaticMeshes(object, type) { //1: add, 0:dispose
@@ -57,7 +57,7 @@ function updateStaticMeshes(object, type) { //1: add, 0:dispose
         if (!child.isMesh) return;
 
         const isRoom = /^Room\d+$/.test(child.name);
-        const isExcluded = child.name.endsWith('Point') || child.name.startsWith('Torch');
+        const isExcluded = child.name.endsWith('Point') || child.name.startsWith('Torch') || child.name.startsWith('Ground') || child.name.startsWith('MapTree');
 
         if (type == 1 && !staticMeshes.includes(child) && !isRoom && !isExcluded) {
             staticMeshes.push(child);
